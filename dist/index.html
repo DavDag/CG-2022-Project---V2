@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>CG Project (2022)</title>
+    <style>
+      body {
+        background-color: #000 !important;
+      }
+      .mcanvas {
+        position: absolute;
+        margin: auto;
+        top: 0px;
+        bottom: 0px;
+        left: 0px;
+        right: 0px;
+      }
+      .mborder {
+        --bdc: #000;
+        text-shadow: 2px 0 0 var(--bdc), -2px 0 0 var(--bdc), 0 2px 0 var(--bdc), 0 -2px 0 var(--bdc), 1px 1px var(--bdc), -1px -1px 0 var(--bdc), 1px -1px 0 var(--bdc), -1px 1px 0 var(--bdc);
+      }
+    </style>
+  </head>
+  <body class="overflow-hidden">
+    <!-- Canvas -->
+    <!--
+    <canvas id="main-canvas" class="vw-100 vh-100"></canvas>
+    -->
+    <canvas id="main-canvas" class="mcanvas" width="800" height="600"></canvas>
+    <!-- Commands -->
+    <div class="mborder" style="position: absolute; top: 0px; left: 0px; padding: 4px; color: #fff;">
+      <span>
+        [WASD / Arrows] to move the car<br>
+        [C] To change Camera<br>
+        [R] To reset Car position<br>
+        [Shift] extras<br>
+        <span class="extraFunctions" hidden>
+          [1] To toggle debug view<br>
+          [L] To hide/show light positions<br>
+        </span>
+      </span>
+    </div>
+
+    <!-- Debug Data -->
+    <div style="position: absolute; left: 50%; top: 0px; margin: auto; padding: 4px; color: #fff;">
+      <span id="fpsIndicator"></span> (FPS)<br>
+      <span class="extraFunctions" hidden>
+        [7] DirLights: <span id="dirLightsIndicator"></span><br>
+        [8] PointLights: <span id="pointLightsIndicator"></span><br>
+        [9] SpotLights: <span id="spotLightsIndicator"></span><br>
+      </span>
+    </div>
+
+    <!-- Car Data -->
+    <div class="mborder" style="position: absolute; right: 0px; top: 0px; padding: 4px; color: #fff;">
+      <span id="accIndicator"></span> (Acceleration)<br>
+      <span id="speedIndicator"></span> (Speed)<br>
+    </div>
+
+    <!-- Main JS -->
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
