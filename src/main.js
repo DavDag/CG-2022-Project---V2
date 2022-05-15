@@ -1,44 +1,34 @@
 /** @author: Davide Risaliti davdag24@gmail.com */
 
-import { Debug, Mat4, Vec3 } from "webgl-basic-lib";
-import { CameraManager } from "./utils/camera.js";
-import { Car } from "./objects/car.js";
-import { Environment } from "./objects/environment.js";
-import { CarController } from "./utils/car_controller.js";
-import { UI } from "./ui.js";
+import { LightManager } from "./managers/light_mng.js";
+import { UIManager } from "./managers/ui_mng.js";
+import { CameraManager } from "./managers/camera_mng.js";
+import { Renderer } from "./rendering/renderer.js";
+import { Player } from "./objects/player.js";
 import { UpdateFps } from "./utils/fps_counter.js";
-import { LightMng } from "./graphics/light.js";
 
 export class App {
   #ctx = null;
-  #ui = null;
+
+  #uiMng = null;
   #lightMng = null;
   #cameraMng = null;
-  #environment = null;
-  #car = null;
-  #controller = null;
+
+  #renderer = null;
+  #player = null;
 
   onResize(canvasSize, contextSize) {
     const gl = this.#ctx;
-
-    console.log("Resize", canvasSize.toString(0), contextSize.toString(0));
-
     gl.canvasEl.width  = canvasSize.w;
     gl.canvasEl.height = canvasSize.h;
-    // gl.canvas.width    = contextSize.w;
-    // gl.canvas.height   = contextSize.h;
-    // gl.viewport(0, 0, contextSize.w, contextSize.h);
     gl.viewport(0, 0, canvasSize.w, canvasSize.h);
-    
-    const factor = contextSize.w / contextSize.h;
-    this.#cameraMng.onResize(factor);
+    this.#cameraMng.onResize((contextSize.w / contextSize.h));
   }
 
   onKeyDown(event) {
-    // console.log(event);
     switch (event.key) {
       case "Shift": {
-        this.#ui.showExtFunctions = !this.#ui.showExtFunctions;
+        this.#uiMng.showExtFunctions = !this.#uiMng.showExtFunctions;
         break;
       }
       case "1": {
@@ -62,7 +52,7 @@ export class App {
         break;
       }
       case "r": {
-        this.#car.mat = Mat4.Identity();
+        this.#player.reset();
         break;
       }
       case "l": {
@@ -70,57 +60,35 @@ export class App {
         break;
       }
     }
-    this.#controller.onKeyDown(event);
+    this.#player.onKeyDown(event);
   }
 
   onKeyUp(event) {
-    switch (event.key) {
-    }
-    this.#controller.onKeyUp(event);
+    this.#player.onKeyUp(event);
   }
 
-  async #setup() {
+  #setup() {
     const gl = this.#ctx;
-    this.#ui = new UI(gl);
-    this.#lightMng = new LightMng(gl);
-    this.#lightMng.addDL(new Vec3(1, -1, 0.25));
-    this.#cameraMng = new CameraManager();
-    this.#environment = new Environment(gl, this.#lightMng);
-    this.#controller = new CarController();
-    this.#car = new Car(gl, this.#lightMng, this.#controller);
+    this.#uiMng = new UIManager();
+    this.#lightMng = new LightManager(gl);
+    this.#cameraMng = new CameraManager(gl);
+    this.#player = new Player(gl);
+    this.#renderer = new Renderer(gl, this.#lightMng, this.#cameraMng, this.#player);
   }
 
   #update(dt) {
-    this.#environment.update(dt);
-    this.#controller.update(dt);
-    this.#car.update(dt);
-
-    this.#ui.update(dt, this.#car, this.#controller, this.#lightMng);
+    this.#uiMng.update(dt);
+    this.#player.update(dt);
+    this.#cameraMng.updatePlayerMat(this.#player.matrix);
   }
 
   #draw() {
-    this.#cameraMng.onPrepare(this.#car);
-
-    const gl = this.#ctx;
-    const camera = this.#cameraMng.current;
-
-    // Clear
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    // Environment
-    this.#environment.draw(camera);
-
-    // Car
-    this.#car.draw(camera);
-    
-    // UI
-    this.#ui.draw();
+    this.#renderer.draw();
   }
 
   async run(gl) {
     this.#ctx = gl;
-    await this.#setup();
+    this.#setup();
     const draw = (now) => {
       try {
         const dt = UpdateFps(now);

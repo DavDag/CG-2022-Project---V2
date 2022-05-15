@@ -1,6 +1,7 @@
 import { Camera, Mat4, Vec3 } from "webgl-basic-lib";
 
 export class CameraManager {
+  #ctx = null;
 
   #cameras = {
     thirdPerson: {
@@ -66,6 +67,7 @@ export class CameraManager {
   };
 
   #selected = 0;
+  
   #cachedViewMat = Mat4.Identity();
   #cachedProjMat = Mat4.Identity();
   #cachedViewProjMat = Mat4.Identity();
@@ -80,6 +82,10 @@ export class CameraManager {
       viewproj: this.#cachedViewProjMat,
       viewpos: this.#cachedViewPos,
     };
+  }
+
+  constructor(gl) {
+    this.#ctx = gl;
   }
 
   #update() {
@@ -107,9 +113,9 @@ export class CameraManager {
     this.#update();
   }
 
-  onPrepare(playerCar) {
-    this.#playerMat = playerCar.mat;
-    this.#playerMatInv = playerCar.mat.clone().inverse();
+  updatePlayerMat(playerMat) {
+    this.#playerMat = playerMat;
+    this.#playerMatInv = playerMat.clone().inverse();
     this.#update();
   }
 }

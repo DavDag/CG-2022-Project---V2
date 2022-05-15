@@ -1,4 +1,3 @@
-
 const FPS_AVERAGE_COUNT = 30;
 
 var fpsHistory = [];

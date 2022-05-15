@@ -112,7 +112,5 @@ export class CarController {
     if (Math.abs(this.#speed) > this.#maxSpeed) {
       this.#speed = dir * this.#maxSpeed;
     }
-
-    // FIX: Speed (0)
   }
 }
