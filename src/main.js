@@ -6,6 +6,8 @@ import { CameraManager } from "./managers/camera_mng.js";
 import { Renderer } from "./rendering/renderer.js";
 import { Player } from "./objects/player.js";
 import { UpdateFps } from "./utils/fps_counter.js";
+import { Terrain } from "./objects/terrain.js";
+import { Debug } from "webgl-basic-lib";
 
 export class App {
   #ctx = null;
@@ -15,7 +17,10 @@ export class App {
   #cameraMng = null;
 
   #renderer = null;
-  #player = null;
+  #player = new Player();
+  #objects = [
+    new Terrain(),
+  ];
 
   onResize(canvasSize, contextSize) {
     const gl = this.#ctx;
@@ -72,18 +77,25 @@ export class App {
     this.#uiMng = new UIManager();
     this.#lightMng = new LightManager(gl);
     this.#cameraMng = new CameraManager(gl);
-    this.#player = new Player(gl);
-    this.#renderer = new Renderer(gl, this.#lightMng, this.#cameraMng, this.#player);
+    this.#renderer = new Renderer(gl);
+    this.#player.setup(gl);
+    this.#objects.forEach((obj) => obj.setup(gl));
   }
 
   #update(dt) {
     this.#uiMng.update(dt);
     this.#player.update(dt);
+    this.#objects.forEach((obj) => obj.update(dt));
     this.#cameraMng.updatePlayerMat(this.#player.matrix);
   }
 
   #draw() {
-    this.#renderer.draw();
+    this.#renderer.draw(
+      this.#cameraMng.current,
+      this.#lightMng,
+      this.#player,
+      this.#objects,
+    );
   }
 
   async run(gl) {

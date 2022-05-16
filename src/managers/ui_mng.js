@@ -1,6 +1,5 @@
 import { FPS } from "../utils/fps_counter.js";
 
-
 export class UIManager {
   #ctx = null;
   #docRef = {};
@@ -35,7 +34,7 @@ export class UIManager {
     // this.#docRef.accIndicator.innerText = Math.abs(controller.acceleration).toFixed(1);
     // this.#docRef.speedIndicator.innerText = Math.abs(controller.speed).toFixed(1);
 
-    // this.#docRef.fpsIndicator.innerText = Math.abs(FPS).toFixed(1);
+    this.#docRef.fpsIndicator.innerText = Math.abs(FPS).toFixed(1);
 
     // this.#docRef.dirLightsIndicator.innerText = (!lightMng.dirLightsOff) ? "On" : "Off";
     // this.#docRef.pointLightsIndicator.innerText = (!lightMng.pointLightsOff) ? "On" : "Off";

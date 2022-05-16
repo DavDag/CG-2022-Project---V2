@@ -114,6 +114,7 @@ export class CameraManager {
   }
 
   updatePlayerMat(playerMat) {
+    if (!playerMat) return;
     this.#playerMat = playerMat;
     this.#playerMatInv = playerMat.clone().inverse();
     this.#update();
