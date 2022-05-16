@@ -38,7 +38,8 @@ export class App {
     gl.canvasEl.width  = canvasSize.w;
     gl.canvasEl.height = canvasSize.h;
     gl.viewport(0, 0, canvasSize.w, canvasSize.h);
-    this.#cameraMng.onResize((contextSize.w / contextSize.h));
+    this.#cameraMng.onResize((canvasSize.w / canvasSize.h));
+    this.#renderer.onResize(canvasSize);
   }
 
   onKeyDown(event) {
