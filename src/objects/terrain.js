@@ -20,7 +20,7 @@ vt ${NUM_TILE} 0
 
 vn 0 0 1
 
-usemtl default
+usemtl asphalt
 
 f 1/1/1 2/2/1 3/3/1 4/4/1
 `;

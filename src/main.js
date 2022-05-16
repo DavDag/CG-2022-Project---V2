@@ -8,6 +8,7 @@ import { Player } from "./objects/player.js";
 import { UpdateFps } from "./utils/fps_counter.js";
 import { Terrain } from "./objects/terrain.js";
 import { Debug } from "webgl-basic-lib";
+import { MaterialsManager } from "./managers/material_mng.js";
 
 export class App {
   #ctx = null;
@@ -15,6 +16,7 @@ export class App {
   #uiMng = null;
   #lightMng = null;
   #cameraMng = null;
+  #materialMng = null;
 
   #renderer = null;
   #player = new Player();
@@ -64,6 +66,10 @@ export class App {
         this.#lightMng.show = !this.#lightMng.show;
         break;
       }
+      case "f": {
+        this.#cameraMng.forceFollowPlayer = (this.#cameraMng.forceFollowPlayer + 1) % 3;
+        break;
+      }
     }
     this.#player.onKeyDown(event);
   }
@@ -77,6 +83,7 @@ export class App {
     this.#uiMng = new UIManager();
     this.#lightMng = new LightManager(gl);
     this.#cameraMng = new CameraManager(gl);
+    this.#materialMng = new MaterialsManager(gl);
     this.#renderer = new Renderer(gl);
     this.#player.setup(gl);
     this.#objects.forEach((obj) => obj.setup(gl));
@@ -86,13 +93,14 @@ export class App {
     this.#uiMng.update(dt);
     this.#player.update(dt);
     this.#objects.forEach((obj) => obj.update(dt));
-    this.#cameraMng.updatePlayerMat(this.#player.matrix);
+    this.#cameraMng.updatePlayerMat(this.#player.posDirMatrix);
   }
 
   #draw() {
     this.#renderer.draw(
       this.#cameraMng.current,
       this.#lightMng,
+      this.#materialMng,
       this.#player,
       this.#objects,
     );

@@ -1,4 +1,4 @@
-import { MatrixStack } from "webgl-basic-lib";
+import { Debug, MatrixStack, Vec3, Vec4 } from "webgl-basic-lib";
 import { CreateProgramFromData, SHADERS } from "./shaders.js";
 
 export class Renderer {
@@ -14,7 +14,10 @@ export class Renderer {
     this.#programs.default = CreateProgramFromData(gl, SHADERS.DEFAULT);
   }
 
-  #drawImplForObj(obj, mat, stack) {
+  #drawImplForObj(object, material_mng, stack) {
+    const obj = object.obj;
+    const mat = object.matrix;
+
     if (!obj) return;
 
     const gl = this.#ctx;
@@ -28,11 +31,15 @@ export class Renderer {
     prog.enableAttributes();
 
     Object.values(obj.meshes).forEach((mesh) => {
+      if (mesh.hide) return;
+      
       const curr = stack.push(mesh.matrix);
       prog.uMatrix.update(curr.values);
 
       mesh.sections.forEach((submesh) => {
-        submesh.material.texture.bind(0);
+        if (submesh.hide) return;
+        const material = material_mng.get(submesh.material);
+        material.colorTex.bind(0);
         gl.drawArrays(gl.TRIANGLES, submesh.index, submesh.length);
       });
 
@@ -44,10 +51,22 @@ export class Renderer {
 
     prog.unbind();
 
+    // Debug
+    Object.values(obj.meshes).forEach((mesh) => {
+      if (mesh.hide) return;
+
+      const curr = stack.push(mesh.matrix);
+
+      Debug.drawPoints(obj.rawVertexesData, 8, curr, mesh.vBuffer.index, mesh.vBuffer.length, new Vec4(1, 0, 0, 1), 5.0);
+      Debug.drawLines(obj.rawVertexesData, obj.rawLinesData, 8, curr, mesh.lBuffer.index, mesh.lBuffer.length, new Vec4(1, 1, 1, 1));
+
+      stack.pop();
+    });
+
     stack.pop();
   }
 
-  draw(camera, light_mng, player, objects) {
+  draw(camera, light_mng, material_mng, player, objects) {
     const gl = this.#ctx;
 
     this.#stack.push(camera.viewproj);
@@ -58,8 +77,8 @@ export class Renderer {
     gl.enable(gl.DEPTH_TEST);
 
     {
-      objects.forEach((object) => this.#drawImplForObj(object.obj, object.matrix, this.#stack));
-      this.#drawImplForObj(player.obj, player.matrix, this.#stack);
+      objects.forEach((object) => this.#drawImplForObj(object, material_mng, this.#stack));
+      this.#drawImplForObj(player, material_mng, this.#stack);
     }
 
     gl.disable(gl.DEPTH_TEST);

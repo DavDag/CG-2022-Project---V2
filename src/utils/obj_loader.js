@@ -2,20 +2,13 @@
 // https://en.wikipedia.org/wiki/Wavefront_.obj_file
 
 import { Mat4, Vec2, Vec3 } from "webgl-basic-lib";
-import { SingleColorTexture, TemporaryTexture } from "../rendering/textures.js";
-
-export class OBJMaterial {
-  texture = null;
-
-  constructor(texture) {
-    this.texture = texture;
-  }
-}
 
 export class OBJSection {
   material = null;
   index = -1;
   length = 0;
+
+  hide = false;
 
   constructor(material, index) {
     this.material = material;
@@ -37,6 +30,8 @@ export class OBJMesh {
   };
   sections = [];
 
+  hide = false;
+
   constructor(vBufferRef, vBufferIndex, lBufferRef, lBufferIndex) {
     this.matrix = Mat4.Identity();
     this.vBuffer.ref = vBufferRef;
@@ -53,7 +48,7 @@ export class OBJGraph {
   name = null;
 
   meshes = null;
-  materials = null;
+  materials = [];
   rawVertBuff = null;
   rawVertexesData = null;
   rawLinesBuff = null;
@@ -68,13 +63,9 @@ export class OBJGraph {
     this.rawLinesBuff = rawLinesBuff;
   }
 
-  static FromText(gl, text, mute) {
+  static FromText(gl, text, mute, opts) {
     const meshes = {};
-    const materials = {
-        debug: new OBJMaterial(
-          TemporaryTexture(gl)
-        ),
-    };
+    const materials = [];
 
     var name = undefined;
     var current = undefined;
@@ -111,7 +102,7 @@ export class OBJGraph {
             current.lBuffer.length = lines.length - current.lBuffer.index;
           }
           if (current?.sections.at(-1)) {
-            current.sections.at(-1).length = (vertexes.length - current.vBuffer.index);
+            current.sections.at(-1).length = (vertexes.length - current.sections.at(-1).index);
           }
           meshes[name] = new OBJMesh(
             rawVertBuff,
@@ -134,8 +125,11 @@ export class OBJGraph {
         
         // Vertex (Texture coords)
         case "vt": {
-          const u = parseFloat(keys[1]);
-          const v = parseFloat(keys[2]);
+          var u = parseFloat(keys[1]);
+          var v = parseFloat(keys[2]);
+          if (opts?.procUvs) {
+            [u, v] = opts.procUvs(u, v);
+          }
           uvs.push(new Vec2(u, v));
           break;
         }
@@ -182,9 +176,9 @@ export class OBJGraph {
             // Push lines
             const index = vertexes.length - 3;
             lines.push(
-              [index + 0, index + 1],
-              [index + 1, index + 2],
-              [index + 2, index + 0]
+              index + 0, index + 1,
+              index + 1, index + 2,
+              index + 2, index + 0,
             );
           }
           break;
@@ -192,19 +186,16 @@ export class OBJGraph {
 
         // Update material for mesh
         case "usemtl": {
-          name = keys[1];
+          // name = keys[1];
+          const materialName = keys[1];
 
-          // Add material if needed
-          if (!materials[name]) {
-            materials[name] = new OBJMaterial(
-              SingleColorTexture(gl, [Math.round(Math.random() * 256), Math.round(Math.random() * 256), 0xff, 0xff])
-            );
-          }
+          if (!materials.includes(materialName)) materials.push(materialName);
+
           if (current.sections.at(-1)) {
-            current.sections.at(-1).length = (vertexes.length - current.vBuffer.index);
+            current.sections.at(-1).length = (vertexes.length - current.sections.at(-1).index);
           }
 
-          current.sections.push(new OBJSection(materials[name], vertexes.length));
+          current.sections.push(new OBJSection(materialName, vertexes.length));
           break;
         }
   
@@ -228,8 +219,13 @@ export class OBJGraph {
       current.lBuffer.length = lines.length - current.lBuffer.index;
     }
     if (current?.sections.at(-1)) {
-      current.sections.at(-1).length = (vertexes.length - current.vBuffer.index);
+      current.sections.at(-1).length = (vertexes.length - current.sections.at(-1).index);
     }
+
+    Object.values(meshes).forEach((mesh) => {
+      mesh.lBuffer.index *= 2;
+      mesh.lBuffer.length /= 2;
+    })
 
     // Loaded object
     const object = new OBJGraph(gl, name, meshes, materials, rawVertBuff, rawLinesBuff);
@@ -241,7 +237,7 @@ export class OBJGraph {
     const gl = this.#ctx;
     
     this.rawVertexesData = new Float32Array(vertexes.flat());
-    this.rawLinesData = new Uint16Array(lines.flat());
+    this.rawLinesData = new Uint16Array(lines);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.rawVertBuff);
     gl.bufferData(gl.ARRAY_BUFFER, this.rawVertexesData, gl.STATIC_DRAW);

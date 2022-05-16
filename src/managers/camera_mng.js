@@ -66,7 +66,7 @@ export class CameraManager {
     }
   };
 
-  #selected = 0;
+  #selected = 1;
   
   #cachedViewMat = Mat4.Identity();
   #cachedProjMat = Mat4.Identity();
@@ -74,6 +74,8 @@ export class CameraManager {
   #cachedViewPos = Vec3.Zeros();
   #playerMat = Mat4.Identity();
   #playerMatInv = Mat4.Identity();
+
+  forceFollowPlayer = 2; // 0: None, 1: True, 2: False
 
   get current() {
     return {
@@ -93,7 +95,7 @@ export class CameraManager {
     const projMat = cam.obj.perspectiveMat;
     const viewMat = cam.obj.lookatMat;
 
-    if (cam.followPlayer) {
+    if ((cam.followPlayer && this.forceFollowPlayer == 0) || this.forceFollowPlayer == 1) {
       viewMat.apply(this.#playerMatInv);
     }
 
