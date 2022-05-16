@@ -7,17 +7,16 @@ export class Renderer {
 
   #size = null;
 
-  #tmpFB = null;
-  #tmpColRB = null;
-  #tmpDepthRB = null;
-
   #offscreenFB = null;
   #offscreenColTex = null;
   #offscreenDepthTex = null;
 
+  #offscreenRB = null;
+  #offscreenColRB = null;
+  #offscreenDepthRB = null;
+
   #programs = {
     default: null,
-
     blit: null,
   };
 
@@ -29,10 +28,10 @@ export class Renderer {
     this.#offscreenFB = gl.createFramebuffer();
     this.#offscreenColTex =  gl.createTexture();
     this.#offscreenDepthTex =  gl.createTexture();
-
-    this.#tmpFB = gl.createFramebuffer();
-    this.#tmpColRB =  gl.createRenderbuffer();
-    this.#tmpDepthRB =  gl.createRenderbuffer();
+    
+    this.#offscreenRB = gl.createFramebuffer();
+    this.#offscreenColRB = gl.createRenderbuffer();
+    this.#offscreenDepthRB = gl.createRenderbuffer();
   }
 
   onResize(size) {
@@ -48,8 +47,8 @@ export class Renderer {
 
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, size.w, size.h, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.bindTexture(gl.TEXTURE_2D, null);
@@ -62,19 +61,14 @@ export class Renderer {
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#tmpColRB);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA8, size.w, size.h);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#tmpDepthRB);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, size.w, size.h);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-    
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.#tmpFB);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#tmpColRB);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, this.#tmpColRB);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#tmpDepthRB);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.#tmpDepthRB);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenColRB);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, gl.getParameter(gl.MAX_SAMPLES), gl.RGBA8, size.w, size.h);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenRB);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, this.#offscreenColRB);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenDepthRB);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, gl.getParameter(gl.MAX_SAMPLES), gl.DEPTH_COMPONENT24, size.w, size.h);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenRB);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.#offscreenDepthRB);
     gl.bindRenderbuffer(gl.RENDERBUFFER, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -160,8 +154,9 @@ export class Renderer {
 
     this.#stack.push(camera.viewproj);
 
+    // First pass
     {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#tmpFB);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenRB);
       gl.viewport(0, 0, this.#size.w, this.#size.h);
 
       gl.clearColor(0, 0, 0, 1);
@@ -177,24 +172,35 @@ export class Renderer {
       gl.disable(gl.DEPTH_TEST);
     }
 
+    // Debug
     {
-      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.#offscreenFB);
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#tmpFB);
-
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenRB);
       gl.viewport(0, 0, this.#size.w, this.#size.h);
 
-      gl.blitFramebuffer(0, 0, this.#size.w, this.#size.h, 0, 0, this.#size.w, this.#size.h, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, gl.NEAREST);
-      
-      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+      gl.enable(gl.DEPTH_TEST);
+
+      objects.forEach((object) => this.#drawDebug(object, this.#stack));
+      this.#drawDebug(player, this.#stack);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+      gl.disable(gl.DEPTH_TEST);
     }
 
-    const quad = Quad.asAdvancedShape().createBuffers(gl);
+    // Adds AA
+    {
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenRB);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.#offscreenFB);
+      gl.blitFramebuffer(0, 0, this.#size.w, this.#size.h, 0, 0, this.#size.w, this.#size.h, gl.COLOR_BUFFER_BIT, gl.LINEAR);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
 
+    // Final Pass
+    const quad = Quad.asAdvancedShape().createBuffers(gl);
     {
       this.#programs.blit.use();
-      this.#programs.blit.uMatrix.update(Mat4.Identity().scale(Vec3.All(2)).values);
-      this.#programs.blit.uTexture.update(0);
+      this.#programs.blit.uMatrix.update(Mat4.Identity().scale(new Vec3(2, 2, 1)).values);
+      this.#programs.blit.uColTex.update(0);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, this.#size.w, this.#size.h);
@@ -216,20 +222,6 @@ export class Renderer {
 
       this.#programs.blit.unbind();
     }
-
-    // {
-    //   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    //   gl.viewport(0, 0, this.#size.w, this.#size.h);
-
-    //   gl.enable(gl.DEPTH_TEST);
-
-    //   objects.forEach((object) => this.#drawDebug(object, this.#stack));
-    //   this.#drawDebug(player, this.#stack);
-
-    //   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-    //   gl.disable(gl.DEPTH_TEST);
-    // }
 
     this.#stack.pop();
   }

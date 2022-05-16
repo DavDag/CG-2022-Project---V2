@@ -58,17 +58,17 @@ export const SHADERS = {
     out vec2 fTex;
     void main() {
       fTex = vec2(vTex.x, 1.0 - vTex.y);
-      gl_Position = uMatrix * vec4(vPos, 1.0);
+      gl_Position = uMatrix * vec4(vPos.xyz, 1.0);
     }
     `,
 
     fragment_shader_src: `#version 300 es
     precision highp float;
     in vec2 fTex;
-    uniform sampler2D uTexture;
+    uniform sampler2D uColTex;
     out vec4 oColor;
     void main() {
-      vec4 col = texture(uTexture, fTex);
+      vec4 col = texture(uColTex, fTex);
       oColor = col;
     }
     `,
@@ -80,7 +80,7 @@ export const SHADERS = {
 
     uniforms: [
       ["uMatrix", "Matrix4fv"],
-      ["uTexture", "1i"],
+      ["uColTex", "1i"],
     ],
   }),
 
