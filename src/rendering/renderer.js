@@ -15,10 +15,6 @@ export class Renderer {
 
   showPartialResults = false;
 
-  // #offscreenRB = null;
-  // #offscreenColRB = null;
-  // #offscreenDepthRB = null;
-
   #quad = null;
 
   #programs = {
@@ -40,10 +36,6 @@ export class Renderer {
     this.#offscreenDepthTex =  gl.createTexture();
 
     this.#quad = Quad.asAdvancedShape().createBuffers(gl);
-    
-    // this.#offscreenRB = gl.createFramebuffer();
-    // this.#offscreenColRB = gl.createRenderbuffer();
-    // this.#offscreenDepthRB = gl.createRenderbuffer();
   }
 
   onResize(size) {
@@ -65,41 +57,52 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, size.w, size.h, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH24_STENCIL8, size.w, size.h, 0, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
     gl.bindTexture(gl.TEXTURE_2D, null);
-    
+
+    this.#bindAllToFB();
+    this.#size = size;
+  }
+
+  #bindAllToFB() {
+    const gl = this.#ctx;
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB);
+
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#offscreenColTex, 0);
+
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenPosTex);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, this.#offscreenPosTex, 0);
+
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenNorTex);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, this.#offscreenNorTex, 0);
+
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.#offscreenDepthTex, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, this.#offscreenDepthTex, 0);
+
     gl.bindTexture(gl.TEXTURE_2D, null);
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    
-    // const maxSamples = gl.getParameter(gl.MAX_SAMPLES);
-    // // console.log(maxSamples);
+  }
 
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenRB);
+  #bindOnlyDepth() {
+    // const gl = this.#ctx;
 
-    // gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenColRB);
-    // gl.renderbufferStorageMultisample(gl.RENDERBUFFER, maxSamples, gl.RGBA8, size.w, size.h);
-    // gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, this.#offscreenColRB);
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB);
+    // gl.bindTexture(gl.TEXTURE_2D, null);
 
-    // gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenDepthRB);
-    // gl.renderbufferStorageMultisample(gl.RENDERBUFFER, maxSamples, gl.DEPTH_COMPONENT24, size.w, size.h);
-    // gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.#offscreenDepthRB);
+    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
+    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, null, 0);
+    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, null, 0);
 
-    // gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    // gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
+    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, this.#offscreenDepthTex, 0);
+
     // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-    this.#size = size;
   }
 
   #drawImplForObj(object, material_mng, camera) {
@@ -186,6 +189,8 @@ export class Renderer {
 
     // First pass
     {
+      this.#bindAllToFB();
+
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB);
       gl.viewport(0, 0, w, h);
 
@@ -209,38 +214,17 @@ export class Renderer {
       gl.disable(gl.DEPTH_TEST);
     }
 
-    // Debug
-    {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB);
-      gl.viewport(0, 0, w, h);
-      
-      gl.drawBuffers([
-        gl.COLOR_ATTACHMENT0,
-      ]);
-      
-      gl.enable(gl.DEPTH_TEST);
-      
-      this.#stack.push(camera.viewproj);
-      objects.forEach((object) => this.#drawDebug(object, this.#stack));
-      this.#drawDebug(player, this.#stack);
-      this.#stack.pop();
-
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-      gl.disable(gl.DEPTH_TEST);
-    }
-
     // Adds AA
     // {
     //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB);
     //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.#offscreenRB);
     //   gl.viewport(0, 0, w, h);
-    //   gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT || gl.DEPTH_BUFFER_BIT, gl.NEAREST);
+    //   gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, gl.NEAREST);
 
     //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenRB);
     //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.#offscreenFB);
     //   gl.viewport(0, 0, w, h);
-    //   gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT || gl.DEPTH_BUFFER_BIT, gl.NEAREST);
+    //   gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, gl.NEAREST);
       
     //   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     // }
@@ -256,6 +240,11 @@ export class Renderer {
       prog.uPosTex.update(1);
       prog.uNorTex.update(2);
       prog.uDepthTex.update(3);
+
+      if (!this.showPartialResults) {
+        prog.uViewPos.update(camera.viewpos.values);
+        light_mng.updateUniforms(prog);
+      }
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, w, h);
@@ -280,6 +269,31 @@ export class Renderer {
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
       prog.unbind();
+    }
+
+    // Debug
+    {
+      this.#bindOnlyDepth();
+
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+
+      // gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.DEPTH_BUFFER_BIT, gl.NEAREST);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, w, h);
+      
+      this.#stack.push(camera.viewproj);
+      
+      gl.enable(gl.DEPTH_TEST);
+      objects.forEach((object) => this.#drawDebug(object, this.#stack));
+      this.#drawDebug(player, this.#stack);
+      gl.disable(gl.DEPTH_TEST);
+      light_mng.draw(this.#stack);
+
+      this.#stack.pop();
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
   }
 }

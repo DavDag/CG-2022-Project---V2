@@ -12,7 +12,7 @@ const EXTENSIONS = [
 
 async function main() {
   try {
-    const gl = RetrieveWebGLContext("webgl2", "main-canvas", true);
+    const gl = RetrieveWebGLContext("webgl2", "main-canvas", { antialias: false }, true);
     Debug.Off();
     AddExtensions(gl, EXTENSIONS);
     const app = new App();

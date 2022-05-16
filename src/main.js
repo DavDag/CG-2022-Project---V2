@@ -1,6 +1,6 @@
 /** @author: Davide Risaliti davdag24@gmail.com */
 
-import { LightManager } from "./managers/light_mng.js";
+import { DLight, LightManager } from "./managers/light_mng.js";
 import { UIManager } from "./managers/ui_mng.js";
 import { CameraManager } from "./managers/camera_mng.js";
 import { Renderer } from "./rendering/renderer.js";
@@ -101,9 +101,13 @@ export class App {
     this.#renderer = new Renderer(gl);
 
     this.#player.setup(gl);
-    this.#objects.forEach((obj) => obj.setup(gl));
+    this.#objects.forEach((obj) => obj.setup(gl, this.#lightMng));
 
-    this.#lightMng.addDL(new Vec3(-0.8, 0.8, 0.2));
+    this.#lightMng.addDL(new DLight(
+      new Vec3(1, -1, 0.25),
+      new Vec3(1, 1, 1),
+      {amb: 0.05, dif: 0.4, spe: 0.5}
+    ));
   }
 
   #update(dt) {

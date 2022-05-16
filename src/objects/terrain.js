@@ -33,7 +33,7 @@ export class Terrain {
   get obj() { return this.#obj; }
   get matrix() { return this.#mat; }
   
-  setup(gl) {
+  setup(gl, light_mng) {
     this.#ctx = gl;
     this.#mat = Mat4.Identity().rotate(toRad(90), new Vec3(1, 0, 0)).scale(Vec3.All(NUM_TILE));
     this.#obj = OBJGraph.FromText(gl, TERRAIN_OBJ, false);
