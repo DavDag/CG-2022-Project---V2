@@ -18,22 +18,34 @@ export const SHADERS = {
     layout (location = 0) in vec3 vPos;
     layout (location = 1) in vec2 vTex;
     layout (location = 2) in vec3 vNor;
-    uniform mat4 uMatrix;
+    uniform mat4 uModel;
+    uniform mat4 uViewProj;
+    out vec3 fPos;
     out vec2 fTex;
+    out vec3 fNor;
     void main() {
+      vec4 worldPos = uModel * vec4(vPos, 1.0);
+      fPos = worldPos.xyz;
       fTex = vTex;
-      gl_Position = uMatrix * vec4(vPos, 1.0);
+      fNor = transpose(inverse(mat3(uModel))) * vNor;
+      gl_Position = uViewProj * worldPos;
     }
     `,
 
     fragment_shader_src: `#version 300 es
     precision highp float;
+    in vec3 fPos;
     in vec2 fTex;
+    in vec3 fNor;
     uniform sampler2D uTexture;
-    out vec4 oColor;
+    layout (location = 0) out vec4 oCol;
+    layout (location = 1) out vec4 oPos;
+    layout (location = 2) out vec4 oNor;
     void main() {
       vec4 col = texture(uTexture, fTex);
-      oColor = col;
+      oCol = col;
+      oPos = vec4(fPos, 1.0);
+      oNor = vec4(normalize(fNor), 0.0);
     }
     `,
 
@@ -44,13 +56,47 @@ export const SHADERS = {
     ],
 
     uniforms: [
+      ["uModel", "Matrix4fv"],
+      ["uViewProj", "Matrix4fv"],
+      ["uTexture", "1i"],
+    ],
+  }),
+
+  BLIT: (gl) => ({
+    vertex_shader_src: `#version 300 es
+    layout (location = 0) in vec3 vPos;
+    layout (location = 1) in vec2 vTex;
+    uniform mat4 uMatrix;
+    out vec2 fTex;
+    void main() {
+      fTex = vec2(vTex.x, 1.0 - vTex.y);
+      gl_Position = uMatrix * vec4(vPos, 1.0);
+    }
+    `,
+
+    fragment_shader_src: `#version 300 es
+    precision highp float;
+    in vec2 fTex;
+    uniform sampler2D uTexture;
+    out vec4 oColor;
+    void main() {
+      vec3 value = texture(uTexture, fTex).rgb;
+      oColor = vec4(value, 1.0);
+    }
+    `,
+
+    attributes: [
+      ["vPos", 3, gl.FLOAT, 32,  0],
+      ["vTex", 2, gl.FLOAT, 32, 12],
+    ],
+
+    uniforms: [
       ["uMatrix", "Matrix4fv"],
       ["uTexture", "1i"],
     ],
   }),
 
-
-  BLIT: (gl) => ({
+  DEFERRED: (gl) => ({
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
     layout (location = 1) in vec2 vTex;
@@ -65,11 +111,17 @@ export const SHADERS = {
     fragment_shader_src: `#version 300 es
     precision highp float;
     in vec2 fTex;
+    uniform sampler2D uPosTex;
     uniform sampler2D uColTex;
+    uniform sampler2D uNorTex;
+    uniform sampler2D uDepthTex;
     out vec4 oColor;
     void main() {
-      vec4 col = texture(uColTex, fTex);
-      oColor = col;
+      vec3 pos = texture(uPosTex, fTex).xyz;
+      vec3 col = texture(uColTex, fTex).rgb;
+      vec3 nor = texture(uNorTex, fTex).xyz;
+      vec3 depth = texture(uDepthTex, fTex).xxx;
+      oColor = vec4(nor, 1.0);
     }
     `,
 
@@ -80,7 +132,10 @@ export const SHADERS = {
 
     uniforms: [
       ["uMatrix", "Matrix4fv"],
+      ["uPosTex", "1i"],
       ["uColTex", "1i"],
+      ["uNorTex", "1i"],
+      ["uDepthTex", "1i"],
     ],
   }),
 

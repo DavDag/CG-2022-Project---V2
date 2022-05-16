@@ -7,6 +7,7 @@ import { RetrieveWebGLContext, Debug, SetResizeHandler, SetMouseHandler, SetKeyb
 import { App } from './main.js';
 
 const EXTENSIONS = [
+  "EXT_color_buffer_float"
 ];
 
 async function main() {
