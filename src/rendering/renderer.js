@@ -214,21 +214,6 @@ export class Renderer {
       gl.disable(gl.DEPTH_TEST);
     }
 
-    // Adds AA
-    // {
-    //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB);
-    //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.#offscreenRB);
-    //   gl.viewport(0, 0, w, h);
-    //   gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, gl.NEAREST);
-
-    //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenRB);
-    //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.#offscreenFB);
-    //   gl.viewport(0, 0, w, h);
-    //   gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, gl.NEAREST);
-      
-    //   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    // }
-
     // Final Pass
     const prog = (this.showPartialResults) ? this.#programs.debug : this.#programs.deferred;
     {
@@ -271,15 +256,18 @@ export class Renderer {
       prog.unbind();
     }
 
-    // Debug
+    // Load Depth buffer
     {
-      this.#bindOnlyDepth();
-
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB);
       gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
 
       // gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.DEPTH_BUFFER_BIT, gl.NEAREST);
+      
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
 
+    // Debug
+    if (!this.showPartialResults) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, w, h);
       
