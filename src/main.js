@@ -52,6 +52,10 @@ export class App {
         Debug.Toggle();
         break;
       }
+      case "5": {
+        this.#renderer.showPartialResults = !this.#renderer.showPartialResults;
+        break;
+      }
       case "7": {
         this.#lightMng.dirLightsOff = !this.#lightMng.dirLightsOff;
         break;

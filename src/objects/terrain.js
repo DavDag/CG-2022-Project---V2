@@ -18,7 +18,7 @@ vt 0 ${NUM_TILE}
 vt ${NUM_TILE} ${NUM_TILE}
 vt ${NUM_TILE} 0
 
-vn 0 0 1
+vn 0 0 -1
 
 usemtl asphalt
 

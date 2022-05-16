@@ -13,25 +13,33 @@ export class Renderer {
   #offscreenNorTex = null;
   #offscreenDepthTex = null;
 
+  showPartialResults = false;
+
   // #offscreenRB = null;
   // #offscreenColRB = null;
   // #offscreenDepthRB = null;
 
+  #quad = null;
+
   #programs = {
     default: null,
-    blit: null,
+    debug: null,
+    deferred: null,
   };
 
   constructor(gl) {
     this.#ctx = gl;
     this.#programs.default = CreateProgramFromData(gl, SHADERS.DEFAULT);
-    this.#programs.blit = CreateProgramFromData(gl, SHADERS.BLIT);
+    this.#programs.debug = CreateProgramFromData(gl, SHADERS.DEBUG_VIEW);
+    this.#programs.deferred = CreateProgramFromData(gl, SHADERS.DEFERRED);
 
     this.#offscreenFB = gl.createFramebuffer();
     this.#offscreenPosTex =  gl.createTexture();
     this.#offscreenColTex =  gl.createTexture();
     this.#offscreenNorTex =  gl.createTexture();
     this.#offscreenDepthTex =  gl.createTexture();
+
+    this.#quad = Quad.asAdvancedShape().createBuffers(gl);
     
     // this.#offscreenRB = gl.createFramebuffer();
     // this.#offscreenColRB = gl.createRenderbuffer();
@@ -174,8 +182,7 @@ export class Renderer {
     if (!this.#size) return;
     const [w, h] = this.#size.values;
     const gl = this.#ctx;
-
-    this.#stack.push(camera.viewproj);
+    const quad = this.#quad;
 
     // First pass
     {
@@ -206,15 +213,17 @@ export class Renderer {
     {
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB);
       gl.viewport(0, 0, w, h);
-
+      
       gl.drawBuffers([
         gl.COLOR_ATTACHMENT0,
       ]);
-
+      
       gl.enable(gl.DEPTH_TEST);
-
+      
+      this.#stack.push(camera.viewproj);
       objects.forEach((object) => this.#drawDebug(object, this.#stack));
       this.#drawDebug(player, this.#stack);
+      this.#stack.pop();
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -237,48 +246,40 @@ export class Renderer {
     // }
 
     // Final Pass
-    const quad = Quad.asAdvancedShape().createBuffers(gl);
-
-    // Debug View of partial results
+    const prog = (this.showPartialResults) ? this.#programs.debug : this.#programs.deferred;
     {
-      this.#programs.blit.use();
-      this.#programs.blit.uTexture.update(0);
+      prog.use();
+
+      const mat = Mat4.Identity().scale(new Vec3(2, -2, 1));
+      prog.uMatrix.update(mat.values);
+      prog.uColTex.update(0);
+      prog.uPosTex.update(1);
+      prog.uNorTex.update(2);
+      prog.uDepthTex.update(3);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, w, h);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, quad.vertbuff);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.indibuff);
-      this.#programs.blit.enableAttributes();
+      prog.enableAttributes();
 
       gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.#offscreenPosTex);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, this.#offscreenNorTex);
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
 
-      [
-        this.#offscreenColTex,
-        this.#offscreenPosTex,
-        this.#offscreenNorTex,
-        this.#offscreenDepthTex,
-      ]
-        .forEach((tex, ind) => {
-          const mat = Mat4.Identity()
-            .translate(new Vec3(-0.5, 0.5, 0))
-            .translate(new Vec3(1, 0, 0).mul(ind % 2))
-            .translate(new Vec3(0, -1, 0).mul(Math.floor(ind / 2)))
-            ;
-          this.#programs.blit.uMatrix.update(mat.values);
-          gl.bindTexture(gl.TEXTURE_2D, tex);
-          gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
-        });
+      gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
 
-      this.#programs.blit.disableAttributes();
+      prog.disableAttributes();
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-      gl.bindTexture(gl.TEXTURE_2D, null);
-
-      this.#programs.blit.unbind();
+      prog.unbind();
     }
-
-    this.#stack.pop();
   }
 }
