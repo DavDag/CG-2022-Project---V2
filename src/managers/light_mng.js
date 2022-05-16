@@ -17,11 +17,14 @@ export class LightManager {
   }
 
   addDL(dir) {
+
   }
 
   addPL(pos, col, props) {
+
   }
 
   addSL(pos, dir, col, props) {
+    
   }
 }

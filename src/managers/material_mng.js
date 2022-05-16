@@ -54,8 +54,10 @@ export class MaterialsManager {
     this.#materials.debug = new MaterialData(TemporaryTexture(gl));
 
     this.#loadMaterial("asphalt", "Asphalt_004", DEF_TILEABLE_CONFIGS(gl));
-    
-    this.#loadMaterialAsColor("carTire", [0.2392157, 0.2392157, 0.2392157]);
+
+    this.#loadMaterial("carTire", "Rubber_Sole_001", DEF_CONFIGS(gl));
+    // this.#loadMaterialAsColor("carTire", [0.2392157, 0.2392157, 0.2392157]);
+
     this.#loadMaterialAsColor("plastic", [0.3764706, 0.3764706, 0.3764706]);
 
     this.#loadMaterialAsColor("window", [0.9372549, 0.9372549, 0.9372549]);
@@ -63,6 +65,8 @@ export class MaterialsManager {
 
     this.#loadMaterialAsColor("lightBack", [1, 0.3490196, 0.227451]);
     this.#loadMaterialAsColor("lightFront", [1, 0.9762833, 0.9292453]);
+
+    this.#loadMaterial("metal", "Metal_006", DEF_CONFIGS(gl));
 
     this.#loadMaterialAsColor("_defaultMat", [1, 1, 1]);
   }
@@ -86,6 +90,7 @@ export class MaterialsManager {
 
     Texture
       .FromUrl(gl, MATERIAL_COLOR_TEX(path), configs)
+      .catch((err) => console.error("Unable to load material: ", name, err))
       .then((tex) => this.#materials[alias].colorTex = tex);
   }
 }

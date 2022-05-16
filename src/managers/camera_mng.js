@@ -66,7 +66,7 @@ export class CameraManager {
     }
   };
 
-  #selected = 1;
+  #selected = 0;
   
   #cachedViewMat = Mat4.Identity();
   #cachedProjMat = Mat4.Identity();
@@ -75,7 +75,7 @@ export class CameraManager {
   #playerMat = Mat4.Identity();
   #playerMatInv = Mat4.Identity();
 
-  forceFollowPlayer = 2; // 0: None, 1: True, 2: False
+  forceFollowPlayer = 0; // 0: None, 1: True, 2: False
 
   get current() {
     return {

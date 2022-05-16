@@ -7,8 +7,16 @@ import { Renderer } from "./rendering/renderer.js";
 import { Player } from "./objects/player.js";
 import { UpdateFps } from "./utils/fps_counter.js";
 import { Terrain } from "./objects/terrain.js";
-import { Debug } from "webgl-basic-lib";
+import { Debug, Vec3 } from "webgl-basic-lib";
 import { MaterialsManager } from "./managers/material_mng.js";
+import { StreetLamp } from "./objects/street_lamp.js";
+
+function CreateStreetLights() {
+  const lamps = [];
+  lamps.push(new StreetLamp(new Vec3(1, 0, 0), 90));
+  lamps.push(new StreetLamp(new Vec3(-1, 0, 0), 270));
+  return lamps;
+}
 
 export class App {
   #ctx = null;
@@ -22,6 +30,7 @@ export class App {
   #player = new Player();
   #objects = [
     new Terrain(),
+    ... CreateStreetLights(),
   ];
 
   onResize(canvasSize, contextSize) {
@@ -85,8 +94,11 @@ export class App {
     this.#cameraMng = new CameraManager(gl);
     this.#materialMng = new MaterialsManager(gl);
     this.#renderer = new Renderer(gl);
+
     this.#player.setup(gl);
     this.#objects.forEach((obj) => obj.setup(gl));
+
+    this.#lightMng.addDL(new Vec3(-0.8, 0.8, 0.2));
   }
 
   #update(dt) {

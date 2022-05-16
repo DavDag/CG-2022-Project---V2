@@ -34,8 +34,11 @@ export class Player {
         this.#mat = Mat4.Identity().scale(Vec3.All(0.5));
         console.log("Player", this.#obj);
 
-        // this.#obj.meshes.body.sections.forEach((sec) => sec.hide = true);
-        // this.#obj.meshes.body.sections[2].hide = false;
+        // this.#obj.meshes.body.hide = true;
+        // this.#obj.meshes.wheel_backLeft.hide = true;
+        // this.#obj.meshes.wheel_backRight.hide = true;
+        // this.#obj.meshes.wheel_frontLeft.hide = true;
+        // this.#obj.meshes.wheel_frontRight.hide = true;
       });
   }
 
@@ -59,8 +62,15 @@ export class Player {
         .mul(dt)
     );
 
-    this.#cachedMat = this.#matForCamera.clone().apply(this.#mat);
+    this.#update();
+  }
 
-    // this.#mat.rotate(toRad(30) * dt, new Vec3(0, 1, 0));
+  reset() {
+    this.#matForCamera = Mat4.Identity();
+    this.#update();
+  }
+
+  #update() {
+    this.#cachedMat = this.#matForCamera.clone().apply(this.#mat);
   }
 }
