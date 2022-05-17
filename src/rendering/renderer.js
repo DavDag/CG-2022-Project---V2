@@ -2,6 +2,7 @@ import { Debug, Mat4, MatrixStack, Program, Quad, toRad, Vec2, Vec3, Vec4 } from
 import { CreateProgramFromData, SHADERS } from "./shaders.js";
 
 export class Renderer {
+  /** @type {WebGL2RenderingContext} */
   #ctx = null;
   #stack = new MatrixStack();
 
@@ -19,14 +20,16 @@ export class Renderer {
 
   #programs = {
     default: null,
-    debug: null,
+    debugview: null,
     deferred: null,
+    debugdraw: null,
   };
 
   constructor(gl) {
     this.#ctx = gl;
     this.#programs.default = CreateProgramFromData(gl, SHADERS.DEFAULT);
-    this.#programs.debug = CreateProgramFromData(gl, SHADERS.DEBUG_VIEW);
+    this.#programs.debugview = CreateProgramFromData(gl, SHADERS.DEBUG_VIEW);
+    this.#programs.debugdraw = CreateProgramFromData(gl, SHADERS.DEBUG_DRAW);
     this.#programs.deferred = CreateProgramFromData(gl, SHADERS.DEFERRED);
 
     this.#offscreenFB = gl.createFramebuffer();
@@ -45,21 +48,29 @@ export class Renderer {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size.w, size.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenPosTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, size.w, size.h, 0, gl.RGBA, gl.FLOAT, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenNorTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, size.w, size.h, 0, gl.RGBA, gl.FLOAT, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH24_STENCIL8, size.w, size.h, 0, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     gl.bindTexture(gl.TEXTURE_2D, null);
 
@@ -87,22 +98,6 @@ export class Renderer {
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  }
-
-  #bindOnlyDepth() {
-    // const gl = this.#ctx;
-
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB);
-    // gl.bindTexture(gl.TEXTURE_2D, null);
-
-    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
-    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, null, 0);
-    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, null, 0);
-
-    // gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
-    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, this.#offscreenDepthTex, 0);
-
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
   #drawImplForObj(object, material_mng, camera) {
@@ -149,36 +144,56 @@ export class Renderer {
     tmpStack.pop();
   }
 
-  #drawDebug(object, stack) {
+  #drawDebug(object, stack, camera) {
     const obj = object.obj;
     const mat = object.matrix;
 
     if (!obj) return;
 
     const gl = this.#ctx;
-    const prog = this.#programs.default;
-    stack.push(mat);
+    const prog = this.#programs.debugdraw;
+    const viewPos = camera.viewpos;
+    const viewProj = camera.viewproj;
+
+    const tmpStack = new MatrixStack();
+
+    tmpStack.push(mat);
+
+    prog.use();
+    prog.uPosTex.update(0);
+    prog.uViewPos.update(viewPos.values);
+    prog.uViewProj.update(viewProj.values);
+    prog.uPointSize.update(5.0);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.#offscreenPosTex);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, obj.rawVertBuff);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, obj.rawLinesBuff);
     prog.enableAttributes();
 
     Object.values(obj.meshes).forEach((mesh) => {
       if (mesh.hide) return;
 
-      const curr = stack.push(mesh.matrix);
+      const curr = tmpStack.push(mesh.matrix);
+      prog.uModel.update(curr.values);
 
-      Debug.drawPoints(obj.rawVertexesData, 8, curr, mesh.vBuffer.index, mesh.vBuffer.length, new Vec4(1, 0, 0, 1), 5.0);
-      Debug.drawLines(obj.rawVertexesData, obj.rawLinesData, 8, curr, mesh.lBuffer.index, mesh.lBuffer.length, new Vec4(1, 1, 1, 1));
+      prog.uColor.update(new Vec4(1, 0, 0, 1).values);
+      gl.drawArrays(gl.POINTS, mesh.vBuffer.index, mesh.vBuffer.length);
 
-      stack.pop();
+      prog.uColor.update(new Vec4(1, 1, 1, 1).values);
+      gl.drawElements(gl.LINES, mesh.lBuffer.length * 2, gl.UNSIGNED_SHORT, mesh.lBuffer.index);
+
+      tmpStack.pop();
     });
     
     prog.disableAttributes();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
     prog.unbind();
 
-    stack.pop();
+    tmpStack.pop();
   }
 
   draw(camera, light_mng, material_mng, player, objects) {
@@ -215,7 +230,7 @@ export class Renderer {
     }
 
     // Final Pass
-    const prog = (this.showPartialResults) ? this.#programs.debug : this.#programs.deferred;
+    const prog = (this.showPartialResults) ? this.#programs.debugview : this.#programs.deferred;
     {
       prog.use();
 
@@ -234,17 +249,21 @@ export class Renderer {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, w, h);
 
+      gl.drawBuffers([
+        gl.BACK
+      ]);
+
       gl.bindBuffer(gl.ARRAY_BUFFER, quad.vertbuff);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.indibuff);
       prog.enableAttributes();
 
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
-      gl.activeTexture(gl.TEXTURE1);
+      gl.activeTexture(gl.TEXTURE0 + 1);
       gl.bindTexture(gl.TEXTURE_2D, this.#offscreenPosTex);
-      gl.activeTexture(gl.TEXTURE2);
+      gl.activeTexture(gl.TEXTURE0 + 2);
       gl.bindTexture(gl.TEXTURE_2D, this.#offscreenNorTex);
-      gl.activeTexture(gl.TEXTURE3);
+      gl.activeTexture(gl.TEXTURE0 + 3);
       gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
 
       gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
@@ -256,29 +275,21 @@ export class Renderer {
       prog.unbind();
     }
 
-    // Load Depth buffer
-    {
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB);
-      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-
-      // gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.DEPTH_BUFFER_BIT, gl.NEAREST);
-      
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    }
-
     // Debug
-    if (!this.showPartialResults) {
+    if (!this.showPartialResults && Debug.isActive) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, w, h);
-      
+
+      gl.drawBuffers([
+        gl.BACK
+      ]);
+
       this.#stack.push(camera.viewproj);
       
-      gl.enable(gl.DEPTH_TEST);
-      objects.forEach((object) => this.#drawDebug(object, this.#stack));
-      this.#drawDebug(player, this.#stack);
-      gl.disable(gl.DEPTH_TEST);
-      light_mng.draw(this.#stack);
+      objects.forEach((object) => this.#drawDebug(object, this.#stack, camera));
+      this.#drawDebug(player, this.#stack, camera);
 
+      light_mng.draw(this.#stack);
       this.#stack.pop();
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);

@@ -93,6 +93,62 @@ export const SHADERS = {
     ],
   }),
 
+  DEBUG_DRAW: (gl) => ({
+    vertex_shader_src: `#version 300 es
+    layout (location = 0) in vec3 vPos;
+    uniform mat4 uModel;
+    uniform mat4 uViewProj;
+    uniform float uPointSize;
+    out vec4 worldPos;
+    out vec4 screenPos;
+    void main() {
+      worldPos = uModel * vec4(vPos, 1.0);
+      gl_Position = uViewProj * worldPos;
+      gl_PointSize = uPointSize;
+      screenPos = gl_Position;
+    }
+    `,
+
+    fragment_shader_src: `#version 300 es
+    precision highp float;
+    in vec2 fTex;
+    uniform vec3 uViewPos;
+    uniform sampler2D uPosTex;
+    uniform vec4 uColor;
+    in vec4 worldPos;
+    in vec4 screenPos;
+    out vec4 oCol;
+    bool areSame(vec3 a, vec3 b) {
+      float dx = abs(a.x - b.x);
+      float dy = abs(a.y - b.y);
+      float dz = abs(a.z - b.z);
+      return dx + dy + dz < 0.01;
+    }
+    void main() {
+      vec2 texCoord = (vec2(1.0) + screenPos.xy / screenPos.w) / 2.0;
+      vec3 pos = texture(uPosTex, texCoord).xyz;
+      if (areSame(worldPos.xyz / worldPos.w, pos)) {
+        oCol = uColor;
+      } else {
+        discard;
+      }
+    }
+    `,
+
+    attributes: [
+      ["vPos", 3, gl.FLOAT, 32,  0],
+    ],
+
+    uniforms: [
+      ["uModel", "Matrix4fv"],
+      ["uViewProj", "Matrix4fv"],
+      ["uViewPos", "3fv"],
+      ["uPosTex", "1i"],
+      ["uColor", "4fv"],
+      ["uPointSize", "1f"],
+    ],
+  }),
+
   DEBUG_VIEW: (gl) => ({
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
@@ -114,16 +170,24 @@ export const SHADERS = {
     uniform sampler2D uDepthTex;
     out vec4 oColor;
     void main() {
-      vec3 fPos = texture(uPosTex, fTex * 2.0).xyz;
-      vec3 fCol = texture(uColTex, fTex * 2.0).rgb;
-      vec3 fNor = texture(uNorTex, fTex * 2.0).xyz;
-      float fDepth = texture(uDepthTex, fTex * 2.0).x;
+      vec2 texCoord1 = vec2(fTex.x * 2.0, fTex.y * 2.0);
+      vec2 texCoord2 = vec2((fTex.x - 0.5) * 2.0, fTex.y * 2.0);
+      vec2 texCoord3 = vec2(fTex.x * 2.0, (fTex.y - 0.5) * 2.0);
+      vec2 texCoord4 = vec2((fTex.x - 0.5) * 2.0, (fTex.y - 0.5) * 2.0);
 
+      vec3 fNor = texture(uNorTex, texCoord1).xyz;
+      float fDepth = texture(uDepthTex, texCoord2).x;
+      vec3 fCol = texture(uColTex, texCoord3).rgb;
+      vec3 fPos = texture(uPosTex, texCoord4).xyz;
+
+      // fDepth = 1.0 - (fDepth + 1.0) / 2.0;
+      fDepth = pow(fDepth, 10.0);
+      
       if (fTex.y > 0.5) {
-        if (fTex.x > 0.5) {
-          oColor = vec4(fPos, 1.0);
-        } else {
+        if (fTex.x < 0.5) {
           oColor = vec4(fCol, 1.0);
+        } else {
+          oColor = vec4(fPos, 1.0);
         }
       } else {
         if (fTex.x < 0.5) {
@@ -230,7 +294,7 @@ export const SHADERS = {
       vec3 fNor = texture(uNorTex, fTex).xyz;
       float fDepth = texture(uDepthTex, fTex).x;
 
-      vec3 viewDir = normalize(uViewPos);
+      vec3 viewDir = normalize(uViewPos - fPos);
       vec3 result = vec3(0, 0, 0);
 
       result += CalcDLight(uDirectionalLight, fCol, fNor, viewDir);

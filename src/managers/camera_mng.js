@@ -1,4 +1,4 @@
-import { Camera, Mat4, Vec3 } from "webgl-basic-lib";
+import { Camera, Mat4, Vec3, Vec4 } from "webgl-basic-lib";
 
 export class CameraManager {
   #ctx = null;
@@ -102,7 +102,7 @@ export class CameraManager {
     this.#cachedViewMat = viewMat;
     this.#cachedProjMat = projMat;
     this.#cachedViewProjMat = Mat4.Identity().apply(projMat).apply(viewMat);
-    this.#cachedViewPos = viewMat.col(4).toVec3();
+    this.#cachedViewPos = viewMat.clone().inverse().col(3).toVec3();
   }
   
   onResize(factor) {

@@ -104,9 +104,9 @@ export class App {
     this.#objects.forEach((obj) => obj.setup(gl, this.#lightMng));
 
     this.#lightMng.addDL(new DLight(
-      new Vec3(1, -1, 0.25),
+      new Vec3(0, -1, 0),
       new Vec3(1, 1, 1),
-      {amb: 0.05, dif: 0.4, spe: 0.5}
+      {amb: 0.05, dif: 0.8, spe: 0.5}
     ));
   }
 

@@ -1,5 +1,5 @@
 import { Mat4, toRad, Vec3, Vec4 } from "webgl-basic-lib";
-import { PLight, SLight } from "../managers/light_mng.js";
+import { PLight } from "../managers/light_mng.js";
 import { OBJGraph } from "../utils/obj_loader.js";
 
 var __loading_static_obj = false;

@@ -243,9 +243,9 @@ export class OBJGraph {
     gl.bufferData(gl.ARRAY_BUFFER, this.rawVertexesData, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.rawLinesBuff);
-    gl.bufferData(gl.ARRAY_BUFFER, this.rawLinesData, gl.STATIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.rawLinesBuff);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.rawLinesData, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 
     if (vertexes.length > 65000) {
       console.warn("Really complex object (>65k vertexes)");
