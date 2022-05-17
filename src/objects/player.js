@@ -15,6 +15,7 @@ export class Player {
   get obj() { return this.#obj; }
   get matrix() { return this.#cachedMat; }
   get posDirMatrix() { return this.#matForCamera; }
+  get controller () { return this.#controller; }
 
   setup(gl) {
     this.#ctx = gl;

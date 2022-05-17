@@ -111,10 +111,16 @@ export class App {
   }
 
   #update(dt) {
-    this.#uiMng.update(dt);
     this.#player.update(dt);
     this.#objects.forEach((obj) => obj.update(dt));
     this.#cameraMng.updatePlayerMat(this.#player.posDirMatrix);
+
+    this.#uiMng.update(
+      this.#player,
+      this.#lightMng,
+      this.#cameraMng,
+      this.#renderer,
+    );
   }
 
   #draw() {

@@ -144,11 +144,12 @@ export class Renderer {
     tmpStack.pop();
   }
 
-  #drawDebug(object, stack, camera) {
+  #drawDebug(object, camera) {
     const obj = object.obj;
     const mat = object.matrix;
 
     if (!obj) return;
+    if (!Debug.isActive) return;
 
     const gl = this.#ctx;
     const prog = this.#programs.debugdraw;
@@ -275,24 +276,26 @@ export class Renderer {
       prog.unbind();
     }
 
-    // Debug
-    if (!this.showPartialResults && Debug.isActive) {
+    // Debug meshes
+    if (!this.showPartialResults) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, w, h);
 
       gl.drawBuffers([
         gl.BACK
       ]);
-
-      this.#stack.push(camera.viewproj);
       
-      objects.forEach((object) => this.#drawDebug(object, this.#stack, camera));
-      this.#drawDebug(player, this.#stack, camera);
-
-      light_mng.draw(this.#stack);
-      this.#stack.pop();
+      objects.forEach((object) => this.#drawDebug(object, camera));
+      this.#drawDebug(player, camera);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    // Debug lights
+    {
+      this.#stack.push(camera.viewproj);
+      light_mng.draw(this.#stack);
+      this.#stack.pop();
     }
   }
 }

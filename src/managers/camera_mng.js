@@ -79,6 +79,7 @@ export class CameraManager {
 
   get current() {
     return {
+      name: Object.keys(this.#cameras)[this.#selected],
       view: this.#cachedViewMat,
       proj: this.#cachedProjMat,
       viewproj: this.#cachedViewProjMat,
