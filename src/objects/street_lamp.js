@@ -41,8 +41,8 @@ export class StreetLamp {
     light_mng.addPL(new PLight(
       this.lightPos,
       this.lightCol,
-      {amb: 0.05, dif: 0.8, spec: 0.5},
-      {lin: 0.09, quad: 0.0032},
+      {amb: 0.05, dif: 0.8, spe: 0.5},
+      {lin: 0.7, qua: 1.8},
     ));
   }
 

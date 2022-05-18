@@ -24,11 +24,17 @@ const DEF_TILEABLE_CONFIGS = (gl) => ({
   genMipMap: true,
 });
 
+const DEF_PROPS = {
+  shininess: 2.0,
+};
+
 export class MaterialData {
   colorTex = null;
+  shininess = 0.0;
 
-  constructor(colorTex) {
+  constructor(colorTex, props) {
     this.colorTex = colorTex;
+    this.shininess = props.shininess;
   }
 }
 
@@ -51,42 +57,99 @@ export class MaterialsManager {
 
   constructor(gl) {
     this.#ctx = gl;
-    this.#materials.debug = new MaterialData(TemporaryTexture(gl));
+    this.#materials.debug = new MaterialData(TemporaryTexture(gl), DEF_PROPS);
 
-    this.#loadMaterial("asphalt", "Asphalt_004", DEF_TILEABLE_CONFIGS(gl));
+    // Asphalt
+    this.#loadMaterial(
+      "asphalt",
+      {
+        shininess: 2.0,
+      },
+      "Asphalt_004",
+      DEF_TILEABLE_CONFIGS(gl)
+    );
 
-    this.#loadMaterial("carTire", "Rubber_Sole_001", DEF_CONFIGS(gl));
-    // this.#loadMaterialAsColor("carTire", [0.2392157, 0.2392157, 0.2392157]);
+    // Tire
+    this.#loadMaterial(
+      "carTire",
+      {
+        shininess: 4.0,
+      },
+      "Rubber_Sole_001",
+      DEF_CONFIGS(gl)
+    );
 
-    this.#loadMaterialAsColor("plastic", [0.3764706, 0.3764706, 0.3764706]);
+    // Plastic
+    this.#loadMaterialAsColor(
+      "plastic",
+      {
+        shininess: 32.0,
+      }, [0.3764706, 0.3764706, 0.3764706]
+    );
 
-    this.#loadMaterialAsColor("window", [0.9372549, 0.9372549, 0.9372549]);
-    this.#loadMaterialAsColor("paintGreen", [0.2392157, 0.8470588, 0.5058824]);
+    // Metal
+    this.#loadMaterial(
+      "metal",
+      {
+        shininess: 64.0,
+      },
+      "Metal_006",
+      DEF_CONFIGS(gl)
+    );
 
-    this.#loadMaterialAsColor("lightBack", [1, 0.3490196, 0.227451]);
-    this.#loadMaterialAsColor("lightFront", [1, 0.9762833, 0.9292453]);
+    // TODO
+    this.#loadMaterialAsColor(
+      "window",
+      DEF_PROPS,
+      [0.9372549, 0.9372549, 0.9372549]
+    );
 
-    this.#loadMaterial("metal", "Metal_006", DEF_CONFIGS(gl));
+    this.#loadMaterialAsColor(
+      "paintGreen",
+      DEF_PROPS,
+      [0.2392157, 0.8470588, 0.5058824]
+    );
 
-    this.#loadMaterialAsColor("_defaultMat", [1, 1, 1]);
+    this.#loadMaterialAsColor(
+      "lightBack",
+      DEF_PROPS,
+      [1, 0.3490196, 0.227451]
+    );
+
+    this.#loadMaterialAsColor(
+      "lightFront",
+      DEF_PROPS,
+      [1, 0.9762833, 0.9292453]
+    );
+
+    // Default
+    this.#loadMaterialAsColor(
+      "_defaultMat",
+      DEF_PROPS,
+      [1, 1, 1]
+    );
   }
 
-  #loadMaterialAsColor(alias, color) {
+  #loadMaterialAsColor(alias, props, color) {
     const gl = this.#ctx;
 
     color = color.map((c) => Math.round(c * 255.0));
     color.push(255);
 
     this.#materials[alias] = new MaterialData(
-      SingleColorTexture(gl, color)
+      SingleColorTexture(gl, color),
+      props
     );
   }
 
-  async #loadMaterial(alias, name, configs) {
+  async #loadMaterial(alias, props, name, configs) {
     const gl = this.#ctx;
     const path = MATERIAL_BASE_PATH(name);
 
-    this.#materials[alias] = new MaterialData(TemporaryTexture(gl));
+    this.#materials[alias] = new MaterialData(
+      TemporaryTexture(gl),
+      props
+    );
 
     Texture
       .FromUrl(gl, MATERIAL_COLOR_TEX(path), configs)

@@ -21,11 +21,14 @@ export const SHADERS = {
     layout (location = 0) in vec3 vPos;
     layout (location = 1) in vec2 vTex;
     layout (location = 2) in vec3 vNor;
+
     uniform mat4 uModel;
     uniform mat4 uViewProj;
+
     out vec3 fPos;
     out vec2 fTex;
     out vec3 fNor;
+
     void main() {
       vec4 worldPos = uModel * vec4(vPos, 1.0);
       fPos = worldPos.xyz;
@@ -37,16 +40,25 @@ export const SHADERS = {
 
     fragment_shader_src: `#version 300 es
     precision highp float;
+
+    struct Material {
+      float shininess;
+    };
+
     in vec3 fPos;
     in vec2 fTex;
     in vec3 fNor;
+
+    uniform Material uMaterial;
     uniform sampler2D uTexture;
+
     layout (location = 0) out vec4 oCol;
     layout (location = 1) out vec4 oPos;
     layout (location = 2) out vec4 oNor;
+
     void main() {
-      vec4 col = texture(uTexture, fTex);
-      oCol = col;
+      vec3 col = texture(uTexture, fTex).rgb;
+      oCol = vec4(col, uMaterial.shininess);
       oPos = vec4(fPos, 1.0);
       oNor = vec4(normalize(fNor), 0.0);
     }
@@ -62,6 +74,7 @@ export const SHADERS = {
       ["uModel", "Matrix4fv"],
       ["uViewProj", "Matrix4fv"],
       ["uTexture", "1i"],
+      ["uMaterial.shininess", "1f"],
     ],
   }),
 
@@ -153,8 +166,11 @@ export const SHADERS = {
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
     layout (location = 1) in vec2 vTex;
+
     uniform mat4 uMatrix;
+
     out vec2 fTex;
+    
     void main() {
       fTex = vTex;
       gl_Position = uMatrix * vec4(vPos, 1.0);
@@ -164,11 +180,14 @@ export const SHADERS = {
     fragment_shader_src: `#version 300 es
     precision highp float;
     in vec2 fTex;
+
     uniform sampler2D uPosTex;
     uniform sampler2D uColTex;
     uniform sampler2D uNorTex;
     uniform sampler2D uDepthTex;
+
     out vec4 oColor;
+
     void main() {
       vec2 texCoord1 = vec2(fTex.x * 2.0, fTex.y * 2.0);
       vec2 texCoord2 = vec2((fTex.x - 0.5) * 2.0, fTex.y * 2.0);
@@ -180,8 +199,13 @@ export const SHADERS = {
       vec3 fCol = texture(uColTex, texCoord3).rgb;
       vec3 fPos = texture(uPosTex, texCoord4).xyz;
 
-      // fDepth = 1.0 - (fDepth + 1.0) / 2.0;
       fDepth = pow(fDepth, 10.0);
+      // fDepth = 1.0 - (fDepth + 1.0) / 2.0;
+      // int bits = int(fDepth * float(2 ^ 24 - 1));
+
+      // float rb = float((bits >>  0) & 0xff) / 255.0;
+      // float gb = float((bits >>  8) & 0xff) / 255.0;
+      // float bb = float((bits >> 16) & 0xff) / 255.0;
       
       if (fTex.y > 0.5) {
         if (fTex.x < 0.5) {
@@ -231,6 +255,10 @@ export const SHADERS = {
     fragment_shader_src: `#version 300 es
     precision highp float;
 
+    struct Material {
+      float shininess;
+    };
+
     struct DLight {
       vec3 dir;
       vec3 col;
@@ -270,9 +298,9 @@ export const SHADERS = {
         float outerCutOff;
     };
 
-    vec3 CalcDLight(DLight light, vec3 color, vec3 normal, vec3 viewDir);
-    vec3 CalcPLight(PLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir);
-    vec3 CalcSLight(SLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir);
+    vec3 CalcDLight(DLight light, vec3 color, vec3 normal, vec3 viewDir, Material material);
+    vec3 CalcPLight(PLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, Material material);
+    vec3 CalcSLight(SLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, Material material);
 
     uniform sampler2D uPosTex;
     uniform sampler2D uColTex;
@@ -293,16 +321,18 @@ export const SHADERS = {
       vec3 fCol = texture(uColTex, fTex).rgb;
       vec3 fNor = texture(uNorTex, fTex).xyz;
       float fDepth = texture(uDepthTex, fTex).x;
+      Material material;
+      material.shininess = texture(uColTex, fTex).a;
 
       vec3 viewDir = normalize(uViewPos - fPos);
       vec3 result = vec3(0, 0, 0);
 
-      result += CalcDLight(uDirectionalLight, fCol, fNor, viewDir);
+      result += CalcDLight(uDirectionalLight, fCol, fNor, viewDir, material);
       for (int i = 0; i < ${NUM_PL}; ++i) {
-        // result += CalcPLight(uPointLights[i], fCol, fNor, fPos, viewDir);
+        result += CalcPLight(uPointLights[i], fCol, fNor, fPos, viewDir, material);
       }
       for (int i = 0; i < ${NUM_SL}; ++i) {
-        // result += CalcSLight(uSpotLights[i], fCol, fNor, fPos, viewDir);
+        // result += CalcSLight(uSpotLights[i], fCol, fNor, fPos, viewDir, material);
       }
 
       oColor = vec4(result, 1.0);
@@ -312,14 +342,15 @@ export const SHADERS = {
       DLight light,
       vec3 color,
       vec3 normal,
-      vec3 viewDir
+      vec3 viewDir,
+      Material material
     ) {
       vec3 lightDir = normalize(-light.dir);
 
       float diff = max(dot(normal, lightDir), 0.0);
 
       vec3 reflectDir = reflect(-lightDir, normal);
-      float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+      float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
 
       vec3 ambient = light.amb * light.col * color;
       vec3 diffuse = light.dif * light.col * diff * color;
@@ -332,17 +363,18 @@ export const SHADERS = {
       PLight light,
       vec3 color,
       vec3 normal,
-      vec3 fPos,
-      vec3 viewDir
+      vec3 position,
+      vec3 viewDir,
+      Material material
     ) {
-      vec3 lightDir = normalize(light.pos - fPos);
+      vec3 lightDir = normalize(light.pos - position);
 
       float diff = max(dot(normal, lightDir), 0.0);
 
       vec3 reflectDir = reflect(-lightDir, normal);
-      float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+      float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
 
-      float distance = length(light.pos - fPos);
+      float distance = length(light.pos - position);
       float attenuation = 1.0 / (1.0 + light.lin * distance + light.qua * (distance * distance));
 
       vec3 ambient = light.amb * light.col * color;
@@ -360,17 +392,18 @@ export const SHADERS = {
       SLight light,
       vec3 color,
       vec3 normal,
-      vec3 fPos,
-      vec3 viewDir
+      vec3 position,
+      vec3 viewDir,
+      Material material
     ) {
-      vec3 lightDir = normalize(light.pos - fPos);
+      vec3 lightDir = normalize(light.pos - position);
 
       float diff = max(dot(normal, lightDir), 0.0);
 
       vec3 reflectDir = reflect(-lightDir, normal);
-      float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+      float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
 
-      float distance = length(light.pos - fPos);
+      float distance = length(light.pos - position);
       float attenuation = 1.0 / (1.0 + light.lin * distance + light.qua * (distance * distance));    
 
       float theta = dot(lightDir, normalize(-light.dir)); 

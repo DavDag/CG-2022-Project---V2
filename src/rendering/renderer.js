@@ -128,8 +128,11 @@ export class Renderer {
 
       mesh.sections.forEach((submesh) => {
         if (submesh.hide) return;
+
         const material = material_mng.get(submesh.material);
         material.colorTex.bind(0);
+        prog["uMaterial.shininess"].update(material.shininess);
+
         gl.drawArrays(gl.TRIANGLES, submesh.index, submesh.length);
       });
 
