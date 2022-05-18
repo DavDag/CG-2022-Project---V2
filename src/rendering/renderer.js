@@ -14,15 +14,22 @@ export class Renderer {
   #offscreenNorTex = null;
   #offscreenDepthTex = null;
 
+  #offscreenFB2 = null;
+  #offscreenColTex2 = null;
+  #offscreenDepthTex2 = null;
+
   showPartialResults = false;
+  antiAliasingMethod = 0; // 0: None, 1: MSAA
 
   #quad = null;
 
   #programs = {
     default: null,
     debugview: null,
-    deferred: null,
     debugdraw: null,
+    deferred: null,
+    textured: null,
+    msaa: null,
   };
 
   constructor(gl) {
@@ -31,6 +38,8 @@ export class Renderer {
     this.#programs.debugview = CreateProgramFromData(gl, SHADERS.DEBUG_VIEW);
     this.#programs.debugdraw = CreateProgramFromData(gl, SHADERS.DEBUG_DRAW);
     this.#programs.deferred = CreateProgramFromData(gl, SHADERS.DEFERRED);
+    this.#programs.textured = CreateProgramFromData(gl, SHADERS.TEXTURED);
+    this.#programs.msaa = CreateProgramFromData(gl, SHADERS.MSAA);
 
     this.#offscreenFB = gl.createFramebuffer();
     this.#offscreenPosTex =  gl.createTexture();
@@ -38,11 +47,16 @@ export class Renderer {
     this.#offscreenNorTex =  gl.createTexture();
     this.#offscreenDepthTex =  gl.createTexture();
 
+    this.#offscreenFB2 = gl.createFramebuffer();
+    this.#offscreenColTex2 =  gl.createTexture();
+    this.#offscreenDepthTex2 =  gl.createRenderbuffer();
+
     this.#quad = Quad.asAdvancedShape().createBuffers(gl);
   }
 
   onResize(size) {
     const gl = this.#ctx;
+    const samples = gl.getParameter(gl.MAX_SAMPLES);
 
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size.w, size.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -72,7 +86,24 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
+    gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex2);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size.w, size.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
     gl.bindTexture(gl.TEXTURE_2D, null);
+
+    // gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenColTex2);
+    // gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA8, size.w, size.h);
+    // gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.RGBA8, size.w, size.h);
+
+    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenDepthTex2);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, size.w, size.h);
+    // gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.DEPTH24_STENCIL8, size.w, size.h);
+
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
 
     this.#bindAllToFB();
     this.#size = size;
@@ -82,20 +113,16 @@ export class Renderer {
     const gl = this.#ctx;
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB);
-
-    gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#offscreenColTex, 0);
-
-    gl.bindTexture(gl.TEXTURE_2D, this.#offscreenPosTex);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, this.#offscreenPosTex, 0);
-
-    gl.bindTexture(gl.TEXTURE_2D, this.#offscreenNorTex);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, this.#offscreenNorTex, 0);
-
-    gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, this.#offscreenDepthTex, 0);
-
     gl.bindTexture(gl.TEXTURE_2D, null);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB2);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#offscreenColTex2, 0);
+    // gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, this.#offscreenColTex2);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, this.#offscreenDepthTex2);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
@@ -156,18 +183,14 @@ export class Renderer {
 
     const gl = this.#ctx;
     const prog = this.#programs.debugdraw;
-    const viewPos = camera.viewpos;
     const viewProj = camera.viewproj;
 
     const tmpStack = new MatrixStack();
 
+    tmpStack.push(viewProj);
     tmpStack.push(mat);
 
     prog.use();
-    prog.uPosTex.update(0);
-    prog.uViewPos.update(viewPos.values);
-    prog.uViewProj.update(viewProj.values);
-    prog.uPointSize.update(5.0);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenPosTex);
@@ -180,8 +203,9 @@ export class Renderer {
       if (mesh.hide) return;
 
       const curr = tmpStack.push(mesh.matrix);
-      prog.uModel.update(curr.values);
+      prog.uMatrix.update(curr.values);
 
+      prog.uPointSize.update(5.0);
       prog.uColor.update(new Vec4(1, 0, 0, 1).values);
       gl.drawArrays(gl.POINTS, mesh.vBuffer.index, mesh.vBuffer.length);
 
@@ -198,6 +222,7 @@ export class Renderer {
     prog.unbind();
 
     tmpStack.pop();
+    tmpStack.pop();
   }
 
   draw(camera, light_mng, material_mng, player, objects) {
@@ -205,6 +230,7 @@ export class Renderer {
     const [w, h] = this.#size.values;
     const gl = this.#ctx;
     const quad = this.#quad;
+    const quadMatRev = Mat4.Identity().scale(new Vec3(2, -2, 1));
 
     // First pass
     {
@@ -233,13 +259,12 @@ export class Renderer {
       gl.disable(gl.DEPTH_TEST);
     }
 
-    // Final Pass
+    // Deferred pass
     const prog = (this.showPartialResults) ? this.#programs.debugview : this.#programs.deferred;
     {
       prog.use();
 
-      const mat = Mat4.Identity().scale(new Vec3(2, -2, 1));
-      prog.uMatrix.update(mat.values);
+      prog.uMatrix.update(quadMatRev.values);
       prog.uColTex.update(0);
       prog.uPosTex.update(1);
       prog.uNorTex.update(2);
@@ -250,11 +275,11 @@ export class Renderer {
         light_mng.updateUniforms(prog);
       }
 
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB2);
       gl.viewport(0, 0, w, h);
 
       gl.drawBuffers([
-        gl.BACK
+        gl.COLOR_ATTACHMENT0,
       ]);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, quad.vertbuff);
@@ -279,26 +304,84 @@ export class Renderer {
       prog.unbind();
     }
 
-    // Debug meshes
+    // Copy depth buffer
+    {
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.#offscreenFB2);
+      
+      gl.viewport(0, 0, w, h);
+
+      gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.DEPTH_BUFFER_BIT, gl.NEAREST);
+
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+    }
+
+    // Debug
     if (!this.showPartialResults) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB2);
       gl.viewport(0, 0, w, h);
 
       gl.drawBuffers([
-        gl.BACK
+        gl.COLOR_ATTACHMENT0,
       ]);
-      
+
+      gl.enable(gl.DEPTH_TEST);
       objects.forEach((object) => this.#drawDebug(object, camera));
       this.#drawDebug(player, camera);
+      gl.disable(gl.DEPTH_TEST);
+
+      this.#stack.push(camera.viewproj);
+      light_mng.draw(this.#stack);
+      this.#stack.pop();
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
-    // Debug lights
-    {
-      this.#stack.push(camera.viewproj);
-      light_mng.draw(this.#stack);
-      this.#stack.pop();
-    }
+    // Draw to screen
+    // if (this.antiAliasingMethod == 0) {
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB2);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+      
+      gl.viewport(0, 0, w, h);
+
+      gl.drawBuffers([
+        gl.BACK,
+      ]);
+
+      gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.LINEAR);
+
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+    // }
+    // else {
+    //   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    //   gl.viewport(0, 0, w, h);
+
+    //   gl.drawBuffers([
+    //     gl.BACK,
+    //   ]);
+
+    //   const prog = this.#programs.msaa;
+
+    //   prog.use();
+    //   prog.uMatrix.update(quadMatRev.values);
+    //   prog.uTexture.update(0);
+
+    //   gl.bindBuffer(gl.ARRAY_BUFFER, quad.vertbuff);
+    //   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.indibuff);
+    //   prog.enableAttributes();
+
+    //   gl.activeTexture(gl.TEXTURE0);
+    //   gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex2);
+
+    //   gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
+
+    //   prog.disableAttributes();
+    //   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    //   gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    //   prog.unbind();
+    // }
   }
 }

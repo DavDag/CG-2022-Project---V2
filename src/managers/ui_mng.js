@@ -27,7 +27,7 @@ export class UIManager {
       speedMeter: document.getElementById("speedMeter"),
 
       debugMeshes: document.getElementById("debugMeshes"),
-
+      aaMethod: document.getElementById("aaMethod"),
       partResults: document.getElementById("partResults"),
 
       dirLights: document.getElementById("dirLights"),
@@ -67,5 +67,6 @@ export class UIManager {
 
     // Rendering
     this.#docRef.partResults.innerText = (renderer.showPartialResults) ? "On" : "Off";
+    this.#docRef.aaMethod.innerText = ["None", "MSAAx2"][renderer.antiAliasingMethod];
   }
 }

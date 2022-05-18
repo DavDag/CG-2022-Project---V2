@@ -13,9 +13,9 @@ const EXTENSIONS = [
 async function main() {
   try {
     const options = {
-      // antialias: false,
+      antialias: false,
       // alpha: false,
-      // premultipliedAlpha: true,
+      // premultipliedAlpha: false,
     };
     const gl = RetrieveWebGLContext("webgl2", "main-canvas", options, true);
     Debug.Off();

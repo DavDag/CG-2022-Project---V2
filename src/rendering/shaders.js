@@ -106,45 +106,90 @@ export const SHADERS = {
     ],
   }),
 
-  DEBUG_DRAW: (gl) => ({
+  TEXTURED: (gl) => ({
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
-    uniform mat4 uModel;
-    uniform mat4 uViewProj;
-    uniform float uPointSize;
-    out vec4 worldPos;
-    out vec4 screenPos;
+    layout (location = 1) in vec2 vTex;
+    uniform mat4 uMatrix;
+    out vec2 fTex;
     void main() {
-      worldPos = uModel * vec4(vPos, 1.0);
-      gl_Position = uViewProj * worldPos;
-      gl_PointSize = uPointSize;
-      screenPos = gl_Position;
+      fTex = vTex;
+      gl_Position = uMatrix * vec4(vPos, 1.0);
     }
     `,
 
     fragment_shader_src: `#version 300 es
     precision highp float;
+    uniform sampler2D uTexture;
     in vec2 fTex;
-    uniform vec3 uViewPos;
-    uniform sampler2D uPosTex;
-    uniform vec4 uColor;
-    in vec4 worldPos;
-    in vec4 screenPos;
     out vec4 oCol;
-    bool areSame(vec3 a, vec3 b) {
-      float dx = abs(a.x - b.x);
-      float dy = abs(a.y - b.y);
-      float dz = abs(a.z - b.z);
-      return dx + dy + dz < 0.01;
-    }
     void main() {
-      vec2 texCoord = (vec2(1.0) + screenPos.xy / screenPos.w) / 2.0;
-      vec3 pos = texture(uPosTex, texCoord).xyz;
-      if (areSame(worldPos.xyz / worldPos.w, pos)) {
-        oCol = uColor;
-      } else {
-        discard;
-      }
+      oCol = texture(uTexture, fTex);
+    }
+    `,
+
+    attributes: [
+      ["vPos", 3, gl.FLOAT, 32,  0],
+      ["vTex", 2, gl.FLOAT, 32, 12],
+    ],
+
+    uniforms: [
+      ["uMatrix", "Matrix4fv"],
+      ["uTexture", "1i"],
+    ],
+  }),
+
+  MSAA: (gl) => ({
+    vertex_shader_src: `#version 300 es
+    layout (location = 0) in vec3 vPos;
+    layout (location = 1) in vec2 vTex;
+    uniform mat4 uMatrix;
+    out vec2 fTex;
+    void main() {
+      fTex = vTex;
+      gl_Position = uMatrix * vec4(vPos, 1.0);
+    }
+    `,
+
+    fragment_shader_src: `#version 300 es
+    precision highp float;
+    uniform sampler2D uTexture;
+    in vec2 fTex;
+    out vec4 oCol;
+    void main() {
+      vec3 col = texture(uTexture, fTex).rgb;
+      oCol = vec4(col, 1.0);
+    }
+    `,
+
+    attributes: [
+      ["vPos", 3, gl.FLOAT, 32,  0],
+      ["vTex", 2, gl.FLOAT, 32, 12],
+    ],
+
+    uniforms: [
+      ["uMatrix", "Matrix4fv"],
+      ["uTexture", "1i"],
+    ],
+  }),
+
+  DEBUG_DRAW: (gl) => ({
+    vertex_shader_src: `#version 300 es
+    layout (location = 0) in vec3 vPos;
+    uniform mat4 uMatrix;
+    uniform float uPointSize;
+    void main() {
+      gl_PointSize = uPointSize;
+      gl_Position = uMatrix * vec4(vPos, 1.0);
+    }
+    `,
+
+    fragment_shader_src: `#version 300 es
+    precision highp float;
+    uniform vec4 uColor;
+    out vec4 oCol;
+    void main() {
+      oCol = uColor;
     }
     `,
 
@@ -153,10 +198,7 @@ export const SHADERS = {
     ],
 
     uniforms: [
-      ["uModel", "Matrix4fv"],
-      ["uViewProj", "Matrix4fv"],
-      ["uViewPos", "3fv"],
-      ["uPosTex", "1i"],
+      ["uMatrix", "Matrix4fv"],
       ["uColor", "4fv"],
       ["uPointSize", "1f"],
     ],
@@ -200,12 +242,6 @@ export const SHADERS = {
       vec3 fPos = texture(uPosTex, texCoord4).xyz;
 
       fDepth = pow(fDepth, 10.0);
-      // fDepth = 1.0 - (fDepth + 1.0) / 2.0;
-      // int bits = int(fDepth * float(2 ^ 24 - 1));
-
-      // float rb = float((bits >>  0) & 0xff) / 255.0;
-      // float gb = float((bits >>  8) & 0xff) / 255.0;
-      // float bb = float((bits >> 16) & 0xff) / 255.0;
       
       if (fTex.y > 0.5) {
         if (fTex.x < 0.5) {
