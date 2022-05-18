@@ -52,10 +52,6 @@ export class App {
         Debug.Toggle();
         break;
       }
-      case "2": {
-        this.#renderer.antiAliasingMethod = (this.#renderer.antiAliasingMethod + 1) % 2;
-        break;
-      }
       case "5": {
         this.#renderer.showPartialResults = !this.#renderer.showPartialResults;
         break;

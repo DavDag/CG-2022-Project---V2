@@ -14,8 +14,8 @@ async function main() {
   try {
     const options = {
       antialias: false,
-      // alpha: false,
-      // premultipliedAlpha: false,
+      alpha: false,
+      premultipliedAlpha: false,
     };
     const gl = RetrieveWebGLContext("webgl2", "main-canvas", options, true);
     Debug.Off();

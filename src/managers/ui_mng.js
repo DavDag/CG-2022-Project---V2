@@ -67,6 +67,5 @@ export class UIManager {
 
     // Rendering
     this.#docRef.partResults.innerText = (renderer.showPartialResults) ? "On" : "Off";
-    this.#docRef.aaMethod.innerText = ["None", "MSAAx2"][renderer.antiAliasingMethod];
   }
 }
