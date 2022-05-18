@@ -94,10 +94,12 @@ export class CameraManager {
   #update() {
     const cam = Object.values(this.#cameras)[this.#selected];
     const projMat = cam.obj.perspectiveMat;
-    const viewMat = cam.obj.lookatMat;
+    var viewMat = cam.obj.lookatMat;
 
     if ((cam.followPlayer && this.forceFollowPlayer == 0) || this.forceFollowPlayer == 1) {
       viewMat.apply(this.#playerMatInv);
+    } else if (this.forceFollowPlayer == 2) {
+      viewMat = this.#cachedViewMat.clone();
     }
 
     this.#cachedViewMat = viewMat;
