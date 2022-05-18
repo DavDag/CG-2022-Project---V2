@@ -328,29 +328,33 @@ export class Renderer {
     }
 
     // Debug
-    if (!this.showPartialResults && Debug.isActive) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.viewport(0, 0, w, h);
+    if (!this.showPartialResults) {
+      // Meshes
+      if (Debug.isActive) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, w, h);
+  
+        gl.drawBuffers([
+          gl.BACK,
+        ]);
+  
+        // gl.enable(gl.DEPTH_TEST);
+        // gl.depthFunc(gl.LEQUAL);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        objects.forEach((object) => this.#drawDebug(object, camera));
+        this.#drawDebug(player, camera);
+        gl.disable(gl.BLEND);
+        // gl.depthFunc(gl.LESS);
+        // gl.disable(gl.DEPTH_TEST);
+  
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        }
 
-      gl.drawBuffers([
-        gl.BACK,
-      ]);
-
-      // gl.enable(gl.DEPTH_TEST);
-      // gl.depthFunc(gl.LEQUAL);
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      objects.forEach((object) => this.#drawDebug(object, camera));
-      this.#drawDebug(player, camera);
-      gl.disable(gl.BLEND);
-      // gl.depthFunc(gl.LESS);
-      // gl.disable(gl.DEPTH_TEST);
-
+      // Lights
       this.#stack.push(camera.viewproj);
       light_mng.draw(this.#stack);
       this.#stack.pop();
-
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
   }
 }

@@ -13,8 +13,14 @@ import { StreetLamp } from "./objects/street_lamp.js";
 
 function CreateStreetLights() {
   const lamps = [];
-  lamps.push(new StreetLamp(new Vec3(1, 0, 0), 90));
-  lamps.push(new StreetLamp(new Vec3(-1, 0, 0), 270));
+  lamps.push(new StreetLamp(new Vec3(2, 0, 1), 90));
+  lamps.push(new StreetLamp(new Vec3(2, 0, 3), 90));
+  lamps.push(new StreetLamp(new Vec3(2, 0, 5), 90));
+  lamps.push(new StreetLamp(new Vec3(2, 0, 7), 90));
+  lamps.push(new StreetLamp(new Vec3(-2, 0, 1), 270));
+  lamps.push(new StreetLamp(new Vec3(-2, 0, 3), 270));
+  lamps.push(new StreetLamp(new Vec3(-2, 0, 5), 270));
+  lamps.push(new StreetLamp(new Vec3(-2, 0, 7), 270));
   return lamps;
 }
 
@@ -100,7 +106,7 @@ export class App {
     this.#materialMng = new MaterialsManager(gl);
     this.#renderer = new Renderer(gl);
 
-    this.#player.setup(gl);
+    this.#player.setup(gl, this.#lightMng);
     this.#objects.forEach((obj) => obj.setup(gl, this.#lightMng));
 
     this.#lightMng.addDL(new DLight(

@@ -11,7 +11,7 @@ export class CameraManager {
         0.1,                // NEAR
         100.0,              // FAR
         new Vec3(0, 2, -3), // POS
-        new Vec3(0, -1, 2), // DIR
+        new Vec3(0, -0.75, 2), // DIR
         new Vec3(0, 1, 0),  // UP
         false,              // ISFIXED
       ),
@@ -44,7 +44,7 @@ export class CameraManager {
         1.0,                // RATIOWH
         0.1,                // NEAR
         100.0,              // FAR
-        new Vec3(0, 25, 0), // POS
+        new Vec3(0, 15, 0), // POS
         new Vec3(0, -1, 0), // DIR
         new Vec3(0, 0, 1),  // UP
         false,              // ISFIXED
@@ -56,8 +56,8 @@ export class CameraManager {
         45,                  // FOVY
         1.0,                 // RATIOWH
         0.1,                 // NEAR
-        150.0,               // FAR
-        new Vec3(0, 125, 0), // POS
+        100.0,               // FAR
+        new Vec3(0, 50, 0),  // POS
         new Vec3(0, -1, 0),  // DIR
         new Vec3(0, 0, 1),   // UP
         false,               // ISFIXED

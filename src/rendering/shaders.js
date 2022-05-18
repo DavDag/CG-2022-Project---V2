@@ -11,8 +11,8 @@ export function CreateProgramFromData(gl, dataGen) {
   return program;
 }
 
-export const NUM_PL = 4;
-export const NUM_SL = 4;
+export const NUM_PL = 32;
+export const NUM_SL = 32;
 
 export const SHADERS = {
 
@@ -60,7 +60,7 @@ export const SHADERS = {
       vec3 col = texture(uTexture, fTex).rgb;
       oCol = vec4(col, uMaterial.shininess);
       oPos = vec4(fPos, 1.0);
-      oNor = vec4(normalize(fNor), 0.0);
+      oNor = vec4(normalize(fNor), 1.0);
     }
     `,
 
@@ -319,6 +319,10 @@ export const SHADERS = {
     out vec4 oColor;
 
     void main() {
+      if (texture(uNorTex, fTex).w == 0.0) {
+        discard;
+      }
+
       vec3 fPos = texture(uPosTex, fTex).xyz;
       vec3 fCol = texture(uColTex, fTex).rgb;
       vec3 fNor = texture(uNorTex, fTex).xyz;
@@ -330,11 +334,11 @@ export const SHADERS = {
       vec3 result = vec3(0, 0, 0);
 
       result += CalcDLight(uDirectionalLight, fCol, fNor, viewDir, material);
-      for (int i = 0; i < ${NUM_PL}; ++i) {
-        result += CalcPLight(uPointLights[i], fCol, fNor, fPos, viewDir, material);
+      for (int p = 0; p < ${NUM_PL}; ++p) {
+        result += CalcPLight(uPointLights[p], fCol, fNor, fPos, viewDir, material);
       }
-      for (int i = 0; i < ${NUM_SL}; ++i) {
-        // result += CalcSLight(uSpotLights[i], fCol, fNor, fPos, viewDir, material);
+      for (int s = 0; s < ${NUM_SL}; ++s) {
+        result += CalcSLight(uSpotLights[s], fCol, fNor, fPos, viewDir, material);
       }
 
       oColor = vec4(result, 1.0);
