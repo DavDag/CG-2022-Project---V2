@@ -139,40 +139,6 @@ export const SHADERS = {
     ],
   }),
 
-  MSAA: (gl) => ({
-    vertex_shader_src: `#version 300 es
-    layout (location = 0) in vec3 vPos;
-    layout (location = 1) in vec2 vTex;
-    uniform mat4 uMatrix;
-    out vec2 fTex;
-    void main() {
-      fTex = vTex;
-      gl_Position = uMatrix * vec4(vPos, 1.0);
-    }
-    `,
-
-    fragment_shader_src: `#version 300 es
-    precision highp float;
-    uniform sampler2D uTexture;
-    in vec2 fTex;
-    out vec4 oCol;
-    void main() {
-      vec3 col = texture(uTexture, fTex).rgb;
-      oCol = vec4(col, 1.0);
-    }
-    `,
-
-    attributes: [
-      ["vPos", 3, gl.FLOAT, 32,  0],
-      ["vTex", 2, gl.FLOAT, 32, 12],
-    ],
-
-    uniforms: [
-      ["uMatrix", "Matrix4fv"],
-      ["uTexture", "1i"],
-    ],
-  }),
-
   DEBUG_DRAW: (gl) => ({
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
