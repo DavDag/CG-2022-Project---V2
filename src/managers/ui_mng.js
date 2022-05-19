@@ -1,6 +1,31 @@
 import { Debug } from "webgl-basic-lib";
 import { FPS } from "../utils/fps_counter.js";
 
+const global_data_counter = {
+  objs: [],
+  totVert: function() {
+    var result = 0;
+    this.objs.forEach((o) => {
+      if (!o.obj || o.hide) return;
+      const tot = (o.obj.rawVertexesData.length / 8.0);
+      result += tot;
+    });
+    return result;
+  },
+};
+
+export function OnObjCreated(obj) {
+  // console.log(obj);
+  global_data_counter.objs.push(obj);
+}
+
+export function OnObjLoaded(obj) {
+  // console.log(obj.name);
+}
+
+const ON = "<span style=\"color:#0F0\">ON</span>";
+const OFF = "<span style=\"color:#F00\">OFF</span>";
+
 export class UIManager {
   #ctx = null;
   #docRef = {};
@@ -22,6 +47,7 @@ export class UIManager {
       extraFunctions: document.getElementsByClassName("extraFunctions"),
 
       fpsCounter: document.getElementById("fpsCounter"),
+      totVertexCount: document.getElementById("totVertexCount"),
 
       accMeter: document.getElementById("accMeter"),
       speedMeter: document.getElementById("speedMeter"),
@@ -30,6 +56,8 @@ export class UIManager {
       aaMethod: document.getElementById("aaMethod"),
       showBuildings: document.getElementById("showBuildings"),
       showCars: document.getElementById("showCars"),
+      showEnvironment: document.getElementById("showEnvironment"),
+      showPlayer: document.getElementById("showPlayer"),
       partResults: document.getElementById("partResults"),
 
       dirLights: document.getElementById("dirLights"),
@@ -50,29 +78,32 @@ export class UIManager {
     renderer,
   ) {
     // General
-    this.#docRef.fpsCounter.innerText = Math.abs(FPS).toFixed(1);
+    this.#docRef.fpsCounter.innerHTML = Math.abs(FPS).toFixed(1);
+    this.#docRef.totVertexCount.innerHTML = global_data_counter.totVert();
     
     // Player
     const controller = player.controller;
-    this.#docRef.accMeter.innerText = Math.abs(controller.acceleration).toFixed(1);
-    this.#docRef.speedMeter.innerText = Math.abs(controller.speed).toFixed(1);
+    this.#docRef.accMeter.innerHTML = Math.abs(controller.acceleration).toFixed(1);
+    this.#docRef.speedMeter.innerHTML = Math.abs(controller.speed).toFixed(1);
     
     // Lights
-    this.#docRef.dirLights.innerText = (!lightMng.dirLightsOff) ? "On" : "Off";
-    this.#docRef.pointLights.innerText = (!lightMng.pointLightsOff) ? "On" : "Off";
-    this.#docRef.spotLights.innerText = (!lightMng.spotLightsOff) ? "On" : "Off";
-    this.#docRef.showLightsPos.innerText = (lightMng.show) ? "On" : "Off";
+    this.#docRef.dirLights.innerHTML = (!lightMng.dirLightsOff) ? ON : OFF;
+    this.#docRef.pointLights.innerHTML = (!lightMng.pointLightsOff) ? ON : OFF;
+    this.#docRef.spotLights.innerHTML = (!lightMng.spotLightsOff) ? ON : OFF;
+    this.#docRef.showLightsPos.innerHTML = (lightMng.show) ? ON : OFF;
     
     // Meshes
-    this.#docRef.debugMeshes.innerText = (Debug.isActive) ? "On" : "Off";
-    this.#docRef.showBuildings.innerText = (!app.hideBuildings) ? "On" : "Off";
-    this.#docRef.showCars.innerText = (!app.hideCars) ? "On" : "Off";
+    this.#docRef.debugMeshes.innerHTML = (Debug.isActive) ? ON : OFF;
+    this.#docRef.showBuildings.innerHTML = (!app.hideBuildings) ? ON : OFF;
+    this.#docRef.showCars.innerHTML = (!app.hideCars) ? ON : OFF;
+    this.#docRef.showEnvironment.innerHTML = (!app.hideEnvironment) ? ON : OFF;
+    this.#docRef.showPlayer.innerHTML = (!app.hidePlayer) ? ON : OFF;
 
     // Debug
-    this.#docRef.cameraName.innerText = cameraMng.current.name;
-    this.#docRef.forceFollow.innerText = ["Camera-def", "Force-Follow", "Force-Un-Follow"][cameraMng.forceFollowPlayer];
+    this.#docRef.cameraName.innerHTML = cameraMng.current.name;
+    this.#docRef.forceFollow.innerHTML = ["Camera-def", "Force-Follow", "Force-Un-Follow"][cameraMng.forceFollowPlayer];
 
     // Rendering
-    this.#docRef.partResults.innerText = (renderer.showPartialResults) ? "On" : "Off";
+    this.#docRef.partResults.innerHTML = (renderer.showPartialResults) ? ON : OFF;
   }
 }

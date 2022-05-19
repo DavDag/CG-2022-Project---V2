@@ -23,9 +23,6 @@
       .extraFunctions {
         font-size: smaller;
       }
-      .mtext {
-        color: #f00;
-      }
     </style>
   </head>
   <body class="overflow-hidden">
@@ -41,19 +38,21 @@
         [Shift] extras<br>
         <span class="extraFunctions" hidden>
           <hr>
-          [1] Toggle mesh view: <span class="mtext" id="debugMeshes"></span><br>
-          [2] Hide/Show Buildings: <span class="mtext" id="showBuildings"></span><br>
-          [3] Hide/Show Cars: <span class="mtext" id="showCars"></span><br>
-          [5] Show partial results: <span class="mtext" id="partResults"></span><br>
+          [1] Toggle mesh view: <span id="debugMeshes"></span><br>
+          [2] Hide/Show Buildings: <span id="showBuildings"></span><br>
+          [3] Hide/Show Cars: <span id="showCars"></span><br>
+          [4] Hide/Show Environment: <span id="showEnvironment"></span><br>
+          [5] Hide/Show Player: <span id="showPlayer"></span><br>
+          [6] Show partial results: <span id="partResults"></span><br>
           <hr>
-          [7] DirLights: <span class="mtext" id="dirLights"></span><br>
-          [8] PointLights: <span class="mtext" id="pointLights"></span><br>
-          [9] SpotLights: <span class="mtext" id="spotLights"></span><br>
-          [L] Hide/Show lights position: <span class="mtext" id="showLightsPos"></span><br>
+          [7] DirLights: <span id="dirLights"></span><br>
+          [8] PointLights: <span id="pointLights"></span><br>
+          [9] SpotLights: <span id="spotLights"></span><br>
+          [L] Hide/Show lights position: <span id="showLightsPos"></span><br>
           <hr>
           [R] Reset Player position<br>
-          [C] Change Camera: <span class="mtext" id="cameraName"></span><br>
-          [F] Force follow: <span class="mtext" id="forceFollow"></span><br>
+          [C] Change Camera: <span id="cameraName"></span><br>
+          [F] Force follow: <span id="forceFollow"></span><br>
           <hr>
         </span>
       </span>
@@ -62,6 +61,9 @@
     <!-- Debug Data -->
     <div style="position: absolute; left: 50%; top: 0px; margin: auto; padding: 4px; color: #fff;">
       <span id="fpsCounter"></span> (FPS)<br>
+      <span class="extraFunctions" hidden>
+        <span id="totVertexCount"></span> (#Vertices)<br>
+      </span>
     </div>
 
     <!-- Car Data -->

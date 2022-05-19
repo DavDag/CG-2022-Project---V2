@@ -1,4 +1,4 @@
-const FPS_AVERAGE_COUNT = 30;
+const FPS_AVERAGE_COUNT = 60;
 
 var fpsHistory = [];
 var fpsHistoryCurrentIndex = 0;

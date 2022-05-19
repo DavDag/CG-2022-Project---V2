@@ -1,4 +1,5 @@
 import { Mat4, toRad, Vec3, Vec4 } from "webgl-basic-lib";
+import { OnObjCreated, OnObjLoaded } from "../managers/ui_mng.js";
 import { OBJGraph } from "../utils/obj_loader.js";
 
 export const B_TYPE_COMMERCIAL = 0;
@@ -55,6 +56,9 @@ export class Building {
 
   #cachedMat = null;
 
+  tag = "BUILDING";
+  hide = false;
+
   get obj() { return this.#objRef.obj; }
   get matrix() { return this.#cachedMat; }
 
@@ -66,6 +70,7 @@ export class Building {
     this.#rot = rot;
     this.#objRef = __static_obj[this.#type][this.#ind];
     this.#update();
+    OnObjCreated(this);
   }
 
   #update() {
@@ -94,6 +99,7 @@ export class Building {
         this.#objRef.obj = OBJGraph.FromText(gl, text, false);
         this.#objRef.loading = false;
         // console.log("Building", this.#objRef.obj);
+        OnObjLoaded(this.obj);
       });
   }
 

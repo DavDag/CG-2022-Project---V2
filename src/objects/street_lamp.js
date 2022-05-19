@@ -1,5 +1,6 @@
 import { Mat4, toRad, Vec3, Vec4 } from "webgl-basic-lib";
-import { PLight, SLight } from "../managers/light_mng.js";
+import { PLight } from "../managers/light_mng.js";
+import { OnObjCreated, OnObjLoaded } from "../managers/ui_mng.js";
 import { OBJGraph } from "../utils/obj_loader.js";
 
 var __loading_static_obj = false;
@@ -15,6 +16,9 @@ export class StreetLamp {
   #cachedMat = null;
   #cachedLightPos = null;
 
+  tag = "ENVIRONMENT";
+  hide = false;
+
   get obj() { return __static_obj; }
   get matrix() { return this.#cachedMat; }
   // get lightDir() { return new Vec3(0, -1, 0); }
@@ -25,6 +29,7 @@ export class StreetLamp {
     this.#pos = pos;
     this.#rot = rot;
     this.#update();
+    OnObjCreated(this);
   }
 
   #update() {
@@ -62,7 +67,8 @@ export class StreetLamp {
         const text = await resp.text();
         __static_obj = OBJGraph.FromText(gl, text, false);
         __loading_static_obj = false;
-        console.log("StreetLamp", __static_obj);
+        // console.log("StreetLamp", __static_obj);
+        OnObjLoaded(this.obj);
       });
   }
 

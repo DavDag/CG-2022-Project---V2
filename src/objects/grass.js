@@ -1,4 +1,5 @@
 import { Mat4, Vec3 } from "webgl-basic-lib";
+import { OnObjCreated, OnObjLoaded } from "../managers/ui_mng.js";
 import { OBJGraph } from "../utils/obj_loader.js";
 
 const GRASS_OBJ = (o, sz) => (`
@@ -32,6 +33,9 @@ export class Grass {
   #size = null;
   #reversed = null;
 
+  tag = "TERRAIN";
+  hide = false;
+
   get obj() { return this.#obj; }
   get matrix() { return this.#mat; }
 
@@ -39,6 +43,7 @@ export class Grass {
     this.#orig = orig;
     this.#size = size;
     this.#reversed = reversed;
+    OnObjCreated(this);
   }
   
   setup(gl, light_mng) {
@@ -51,6 +56,7 @@ export class Grass {
       ;
     this.#obj = OBJGraph.FromText(gl, GRASS_OBJ(this.#orig, this.#size), false);
     // console.log(`Grass: ${this.#orig.toString(0)} ${this.#size.w}x${this.#size.h}`, this.#obj);
+    OnObjLoaded(this.obj);
   }
 
   update(dt) {

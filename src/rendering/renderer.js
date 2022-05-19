@@ -121,7 +121,7 @@ export class Renderer {
     const obj = object.obj;
     const mat = object.matrix;
 
-    if (!obj || obj.hide) return;
+    if (object.hide || !obj || obj.hide) return;
 
     const gl = this.#ctx;
     const prog = this.#programs.default;
@@ -168,7 +168,7 @@ export class Renderer {
     const obj = object.obj;
     const mat = object.matrix;
 
-    if (!obj || obj.hide) return;
+    if (object.hide || !obj || obj.hide) return;
 
     const gl = this.#ctx;
     const prog = this.#programs.debugdraw;
@@ -240,7 +240,7 @@ export class Renderer {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.enable(gl.DEPTH_TEST);
 
-      objects.forEach((object) => this.#drawImplForObj(object, material_mng, camera));
+      objects.forEach((object) => this.#drawImplForObj(object, material_mng, camera))
       this.#drawImplForObj(player, material_mng, camera);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);

@@ -1,5 +1,6 @@
 import { Mat4, toRad, Vec3, Vec4 } from "webgl-basic-lib";
 import { SLight } from "../managers/light_mng.js";
+import { OnObjCreated, OnObjLoaded } from "../managers/ui_mng.js";
 import { CarController } from "../utils/car_controller.js";
 import { OBJGraph } from "../utils/obj_loader.js";
 
@@ -22,6 +23,9 @@ export class Player {
   #obj = null;
   #controller = null;
 
+  tag = "PLAYER";
+  hide = false;
+
   get obj() { return this.#obj; }
   get matrix() { return this.#cachedMat; }
   get posDirMatrix() { return this.#matForCamera; }
@@ -31,6 +35,10 @@ export class Player {
   #rHeadLight = new SLight(HL_DIR, Vec3.Zeros(), HL_COL, HL_COEFF, HL_FACT, HL_CUTOFF, HL_OUTER_CUTOFF);
   get lHeadLight() { return this.#lHeadLight; }
   get rHeadLight() { return this.#rHeadLight; }
+
+  constructor() {
+    OnObjCreated(this);
+  }
 
   setup(gl, light_mng) {
     this.#ctx = gl;
@@ -53,6 +61,7 @@ export class Player {
         const text = await resp.text();
         this.#obj = OBJGraph.FromText(gl, text, false, {procUvs: (u, v) => [u / 100.0, v / 100.0]});
         // console.log("Player", this.#obj);
+        OnObjLoaded(this.obj);
 
         // this.#obj.meshes.body.hide = true;
         // this.#obj.meshes.wheel_backLeft.hide = true;

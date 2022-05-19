@@ -6,7 +6,7 @@ import { CameraManager } from "./managers/camera_mng.js";
 import { Renderer } from "./rendering/renderer.js";
 import { Player } from "./objects/player.js";
 import { UpdateFps } from "./utils/fps_counter.js";
-import { NUM_TILE, Terrain } from "./objects/terrain.js";
+import { Terrain } from "./objects/terrain.js";
 import { Debug, Vec2, Vec3 } from "webgl-basic-lib";
 import { MaterialsManager } from "./managers/material_mng.js";
 import { StreetLamp } from "./objects/street_lamp.js";
@@ -37,8 +37,19 @@ function CreateTile() {
   objects.push(new Street());
   objects.push(new Grass(new Vec2(20, 20), new Vec2(19, 29), true));
   objects.push(new Grass(new Vec2(-1, 0), new Vec2(19, 20), true));
-  objects.push(new Tree(0, new Vec3(10, 0, 10)));
-  objects.push(new Tree(1, new Vec3(11, 0, 11)));
+
+  const arr = [
+    [12, -5], [ 5, 14], [16, 17], [ 7, 16], [12,  6], [16, 18], [18,  8], [ 2, 17], [ 3, 15], [16,  0],
+    [ 4,  6], [17,  6], [15,  5], [ 4,  7], [ 9, 18], [17, -2], [ 8, 16], [18,  8], [13,  0], [ 8,  0],
+  ];
+  arr.forEach((pos) => objects.push(new Tree(0, new Vec3(pos[0], 0, pos[1]))));
+
+  // const rndInt = (max) => Math.floor(Math.random() * max);
+  // const arr2 = new Array(rndInt(20) + 5)
+  //   .fill(null)
+  //   .map((_) => [rndInt(18) + 1, rndInt(25) - 5]);
+  // arr2.forEach((pos) => objects.push(new Tree(0, new Vec3(pos[0], 0, pos[1]))));
+  // console.log(arr2);
 
   // "City"
   addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 9), 0, true, [[4, 4], [1, 3], [2, 4], [3, 5], [5, 3],]);
@@ -66,6 +77,7 @@ export class App {
 
   hideBuildings = false;
   hideCars = false;
+  hideEnvironment = false;
 
   #renderer = null;
   #player = new Player();
@@ -94,15 +106,25 @@ export class App {
       }
       case "2": {
         this.hideBuildings = !this.hideBuildings;
-        this.#objects.filter((obj) => obj instanceof Building).forEach((obj) => obj.obj.hide = this.hideBuildings);
+        this.#objects.filter((obj) => obj.tag == "BUILDING").forEach((obj) => obj.hide = this.hideBuildings);
         break;
       }
       case "3": {
         this.hideCars = !this.hideCars;
-        // this.#objects.filter((obj) => obj instanceof Car).forEach((obj) => obj.obj.hide = this.hideCars);
+        this.#objects.filter((obj) => obj.tag == "CAR").forEach((obj) => obj.hide = this.hideCars);
+        break;
+      }
+      case "4": {
+        this.hideEnvironment = !this.hideEnvironment;
+        this.#objects.filter((obj) => obj.tag == "ENVIRONMENT").forEach((obj) => obj.hide = this.hideEnvironment);
         break;
       }
       case "5": {
+        this.hidePlayer = !this.hidePlayer;
+        this.#player.hide = this.hidePlayer;
+        break;
+      }
+      case "6": {
         this.#renderer.showPartialResults = !this.#renderer.showPartialResults;
         break;
       }

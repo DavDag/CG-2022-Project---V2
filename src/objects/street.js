@@ -1,4 +1,5 @@
-import { Mat4, toRad, Vec3 } from "webgl-basic-lib";
+import { Mat4, Vec3 } from "webgl-basic-lib";
+import { OnObjCreated, OnObjLoaded } from "../managers/ui_mng.js";
 import { OBJGraph } from "../utils/obj_loader.js";
 import { NUM_TILE } from "./terrain.js";
 
@@ -55,14 +56,22 @@ export class Street {
   #mat = null;
   #obj = null;
 
+  tag = "TERRAIN";
+  hide = false;
+
   get obj() { return this.#obj; }
   get matrix() { return this.#mat; }
+
+  constructor() {
+    OnObjCreated(this);
+  }
   
   setup(gl, light_mng) {
     this.#ctx = gl;
     this.#mat = Mat4.Identity().translate(new Vec3(0, 0.01, 0));
     this.#obj = OBJGraph.FromText(gl, STREET_OBJ, false);
     // console.log("Street", this.#obj);
+    OnObjLoaded(this.obj);
   }
 
   update(dt) {

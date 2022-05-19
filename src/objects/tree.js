@@ -1,5 +1,5 @@
 import { Mat4, toRad, Vec3, Vec4 } from "webgl-basic-lib";
-import { PLight, SLight } from "../managers/light_mng.js";
+import { OnObjCreated, OnObjLoaded } from "../managers/ui_mng.js";
 import { OBJGraph } from "../utils/obj_loader.js";
 
 const VARIANTS = [
@@ -17,6 +17,9 @@ export class Tree {
   #pos = null;
   #cachedMat = null;
 
+  tag = "ENVIRONMENT";
+  hide = false;
+
   get obj() { return __static_obj[this.#ind]; }
   get matrix() { return this.#cachedMat; }
 
@@ -24,6 +27,7 @@ export class Tree {
     this.#ind = ind % VARIANTS.length;
     this.#pos = pos;
     this.#update();
+    OnObjCreated(this);
   }
 
   #update() {
@@ -49,7 +53,8 @@ export class Tree {
         const text = await resp.text();
         __static_obj[this.#ind] = OBJGraph.FromText(gl, text, false);
         __loading_static_obj[this.#ind] = false;
-        console.log("Tree", __static_obj[this.#ind]);
+        // console.log("Tree", __static_obj[this.#ind]);
+        OnObjLoaded(this.obj);
       });
   }
 
