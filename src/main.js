@@ -39,17 +39,16 @@ function CreateTile() {
   objects.push(new Grass(new Vec2(-1, 0), new Vec2(19, 20), true));
 
   const arr = [
-    [12, -5], [ 5, 14], [16, 17], [ 7, 16], [12,  6], [16, 18], [18,  8], [ 2, 17], [ 3, 15], [16,  0],
-    [ 4,  6], [17,  6], [15,  5], [ 4,  7], [ 9, 18], [17, -2], [ 8, 16], [18,  8], [13,  0], [ 8,  0],
+    [12, -5], [ 5, 14], [16, 17], [ 7, 16], [16, 18], [18,  8], [ 2, 17], [ 3, 15], [16,  0],
+    [15,  5], [ 4,  7], [ 9, 18], [17, -2], [ 8, 16], [13,  0], [ 8,  0],
   ];
   arr.forEach((pos) => objects.push(new Tree(0, new Vec3(pos[0], 0, pos[1]))));
 
-  // const rndInt = (max) => Math.floor(Math.random() * max);
-  // const arr2 = new Array(rndInt(20) + 5)
-  //   .fill(null)
-  //   .map((_) => [rndInt(18) + 1, rndInt(25) - 5]);
-  // arr2.forEach((pos) => objects.push(new Tree(0, new Vec3(pos[0], 0, pos[1]))));
-  // console.log(arr2);
+  const arr2 = [
+    [ 9, 12], [12,  6], [18, 18], [ 8, 18], [11,  1], [12,  8], [ 3, -1], [ 9,  9], [17, -3],
+    [ 6, 11], [ 4,  6], [13, -2], [ 2,  9], [12, 12], [17,  6], [14,  4], [ 3, 17],
+  ];
+  arr2.forEach((pos) => objects.push(new Tree(1, new Vec3(pos[0], 0, pos[1]))));
 
   // "City"
   addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 9), 0, true, [[4, 4], [1, 3], [2, 4], [3, 5], [5, 3],]);

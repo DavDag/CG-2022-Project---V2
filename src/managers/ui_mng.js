@@ -25,6 +25,7 @@ export function OnObjLoaded(obj) {
 
 const ON = "<span style=\"color:#0F0\">ON</span>";
 const OFF = "<span style=\"color:#F00\">OFF</span>";
+const CUSTOM = (txt) => ("<span style=\"color:#0FF\">" + txt + "</span>");
 
 export class UIManager {
   #ctx = null;
@@ -100,8 +101,8 @@ export class UIManager {
     this.#docRef.showPlayer.innerHTML = (!app.hidePlayer) ? ON : OFF;
 
     // Debug
-    this.#docRef.cameraName.innerHTML = cameraMng.current.name;
-    this.#docRef.forceFollow.innerHTML = ["Camera-def", "Force-Follow", "Force-Un-Follow"][cameraMng.forceFollowPlayer];
+    this.#docRef.cameraName.innerHTML = CUSTOM(cameraMng.current.name);
+    this.#docRef.forceFollow.innerHTML = CUSTOM(["Camera-def", "Force-Follow", "Force-Un-Follow"][cameraMng.forceFollowPlayer]);
 
     // Rendering
     this.#docRef.partResults.innerHTML = (renderer.showPartialResults) ? ON : OFF;
