@@ -47,6 +47,7 @@ export class UIManager {
     this.#docRef = {
       extraFunctions: document.getElementsByClassName("extraFunctions"),
 
+      canvasSize: document.getElementById("canvasSize"),
       fpsCounter: document.getElementById("fpsCounter"),
       totVertexCount: document.getElementById("totVertexCount"),
 
@@ -80,7 +81,10 @@ export class UIManager {
     cameraMng,
     renderer,
   ) {
+    const gl = this.#ctx;
+
     // General
+    this.#docRef.canvasSize.innerHTML = `${gl.canvasEl.width} x ${gl.canvasEl.height}`;
     this.#docRef.fpsCounter.innerHTML = Math.abs(FPS).toFixed(1);
     this.#docRef.totVertexCount.innerHTML = global_data_counter.totVert();
     

@@ -62,7 +62,7 @@ export class Car {
         const text = await resp.text();
         __static_obj[this.#ind] = OBJGraph.FromText(gl, text, false);
         __loading_static_obj[this.#ind] = false;
-        console.log("Car", __static_obj[this.#ind]);
+        // console.log("Car", __static_obj[this.#ind]);
         OnObjLoaded(this.obj);
       });
   }

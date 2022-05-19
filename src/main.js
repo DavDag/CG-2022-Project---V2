@@ -203,7 +203,7 @@ export class App {
 
   #setup() {
     const gl = this.#ctx;
-    this.#uiMng = new UIManager();
+    this.#uiMng = new UIManager(gl);
     this.#lightMng = new LightManager(gl);
     this.#cameraMng = new CameraManager(gl);
     this.#materialMng = new MaterialsManager(gl);
@@ -217,6 +217,19 @@ export class App {
       new Vec3(1, 1, 1),
       {amb: 0.5, dif: 0.8, spe: 0.1}
     ));
+
+    window.addEventListener("resize", (e) => {
+      const maxHeight = window.screen.height;
+      const maxWidth = window.screen.width;
+      const curHeight = window.innerHeight;
+      const curWidth = window.innerWidth;
+
+      if (maxWidth == curWidth && maxHeight == curHeight) {
+        gl.canvasEl.classList.add("fscreen");
+      } else {
+        gl.canvasEl.classList.remove("fscreen");
+      }
+    });
   }
 
   #update(dt) {

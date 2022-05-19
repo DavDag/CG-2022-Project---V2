@@ -15,6 +15,12 @@
         bottom: 0px;
         left: 0px;
         right: 0px;
+        width: 800px;
+        height: 600px;
+      }
+      .fscreen {
+        width: 100vw;
+        height: 100vh;
       }
       .mborder {
         --bdc: #000;
@@ -55,6 +61,7 @@
           [R] Reset Player position<br>
           [C] Change Camera: <span id="cameraName"></span><br>
           [F] Force follow: <span id="forceFollow"></span><br>
+          [F11] To enter Full Screen<br>
           <hr>
         </span>
       </span>
@@ -62,6 +69,7 @@
 
     <!-- Debug Data -->
     <div style="position: absolute; left: 50%; top: 0px; margin: auto; padding: 4px; color: #fff;">
+      <span id="canvasSize"></span> (Size)<br>
       <span id="fpsCounter"></span> (FPS)<br>
       <span class="extraFunctions" hidden>
         <span id="totVertexCount"></span> (#Vertices)<br>
