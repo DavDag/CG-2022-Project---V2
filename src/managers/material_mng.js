@@ -149,6 +149,24 @@ export class MaterialsManager {
     );
 
     this.#loadMaterialAsColor(
+      "paintWhite",
+      DEF_PROPS,
+      [0.8980392, 0.9058824, 0.9686275]
+    );
+
+    this.#loadMaterialAsColor(
+      "paintRed",
+      DEF_PROPS,
+      [1, 0.227451, 0.3019608]
+    );
+
+    this.#loadMaterialAsColor(
+      "paintYellow",
+      DEF_PROPS,
+      [0.9764706, 0.7686275, 0.2745098]
+    );
+
+    this.#loadMaterialAsColor(
       "trim",
       DEF_PROPS,
       [0.7372549, 0.8862745, 1]
@@ -173,6 +191,12 @@ export class MaterialsManager {
     );
 
     this.#loadMaterialAsColor(
+      "woodDark",
+      DEF_PROPS,
+      [0.7098039, 0.4666667, 0.2901961]
+    );
+    
+    this.#loadMaterialAsColor(
       "foliage",
       DEF_PROPS,
       [0.2666667, 0.8, 0.5803922]
@@ -188,6 +212,48 @@ export class MaterialsManager {
       "foliageFall",
       DEF_PROPS,
       [1, 0.6313726, 0.2039216]
+    );
+
+    this.#loadMaterialAsColor(
+      "roof",
+      DEF_PROPS,
+      [0.3372549, 0.7372549, 0.6]
+    );
+
+    this.#loadMaterialAsColor(
+      "brownDarkest",
+      DEF_PROPS,
+      [0.2588235, 0.1607843, 0.1372549]
+    );
+
+    this.#loadMaterialAsColor(
+      "brownDark",
+      DEF_PROPS,
+      [0.6392157, 0.3882353, 0.2784314]
+    );
+    
+    this.#loadMaterialAsColor(
+      "red",
+      DEF_PROPS,
+      [0.3372549, 0.7372549, 0.6]
+    );
+
+    this.#loadMaterialAsColor(
+      "brownLight",
+      DEF_PROPS,
+      [0.9764706, 0.772549, 0.5490196]
+    );
+
+    this.#loadMaterialAsColor(
+      "purpleLight",
+      DEF_PROPS,
+      [0.9098039, 0.6039216, 0.8156863]
+    );
+
+    this.#loadMaterialAsColor(
+      "yellow",
+      DEF_PROPS,
+      [0.9607843, 0.7254902, 0.2588235]
     );
 
     // White

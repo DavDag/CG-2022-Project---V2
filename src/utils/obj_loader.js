@@ -66,6 +66,8 @@ export class OBJGraph {
   }
 
   static FromText(gl, text, mute, opts) {
+    if (text.startsWith("<!DOCTYPE html>")) return;
+
     const meshes = {};
     const materials = [];
 

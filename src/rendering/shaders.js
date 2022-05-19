@@ -335,10 +335,10 @@ export const SHADERS = {
 
       result += CalcDLight(uDirectionalLight, fCol, fNor, viewDir, material);
       for (int p = 0; p < ${NUM_PL}; ++p) {
-        result += CalcPLight(uPointLights[p], fCol, fNor, fPos, viewDir, material);
+        // result += CalcPLight(uPointLights[p], fCol, fNor, fPos, viewDir, material);
       }
       for (int s = 0; s < ${NUM_SL}; ++s) {
-        result += CalcSLight(uSpotLights[s], fCol, fNor, fPos, viewDir, material);
+        // result += CalcSLight(uSpotLights[s], fCol, fNor, fPos, viewDir, material);
       }
 
       oColor = vec4(result, 1.0);
