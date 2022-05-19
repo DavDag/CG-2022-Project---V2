@@ -8,8 +8,8 @@ const FRONT_VEC = new Vec3(0, 0, 1);
 const HL_POS_L = new Vec3(-0.4, 0.25, 1);
 const HL_POS_R = new Vec3(0.4, 0.25, 1);
 const HL_COL = new Vec3(1, 1, 1);
-const HL_DIR = new Vec3(0, 0, 1);
-const HL_COEFF = {amb: 0.00, dif: 1.0, spe: 1.0};
+const HL_DIR = new Vec3(0, -0.2, 1);
+const HL_COEFF = {amb: 0.00, dif: 1.0, spe: 0.05};
 const HL_FACT = {lin: 0.05, qua: 0.05};
 const HL_CUTOFF = Math.cos(toRad(15));
 const HL_OUTER_CUTOFF = Math.cos(toRad(35));
@@ -41,8 +41,8 @@ export class Player {
     this.#loadAsync();
     this.#update();
 
-    light_mng.addSL(this.lHeadLight);
-    light_mng.addSL(this.rHeadLight);
+    light_mng.addSL(false, this.lHeadLight);
+    light_mng.addSL(false, this.rHeadLight);
   }
 
   #loadAsync() {
@@ -52,7 +52,7 @@ export class Player {
       .then(async (resp) => {
         const text = await resp.text();
         this.#obj = OBJGraph.FromText(gl, text, false, {procUvs: (u, v) => [u / 100.0, v / 100.0]});
-        console.log("Player", this.#obj);
+        // console.log("Player", this.#obj);
 
         // this.#obj.meshes.body.hide = true;
         // this.#obj.meshes.wheel_backLeft.hide = true;

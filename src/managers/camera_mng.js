@@ -63,10 +63,23 @@ export class CameraManager {
         false,               // ISFIXED
       ),
       followPlayer: false,
+    },
+    bigview: {
+      obj: new Camera(
+        45,                   // FOVY
+        1.0,                  // RATIOWH
+        0.1,                  // NEAR
+        100.0,                // FAR
+        new Vec3(0, 50, -50), // POS
+        new Vec3(0, -50, 50), // DIR
+        new Vec3(0, 0, 1),    // UP
+        false,                // ISFIXED
+      ),
+      followPlayer: true,
     }
   };
 
-  #selected = 0;
+  #selected = 4;
   
   #cachedViewMat = Mat4.Identity();
   #cachedProjMat = Mat4.Identity();

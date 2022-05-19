@@ -47,6 +47,8 @@ export class OBJGraph {
   #ctx = null;
   name = null;
 
+  hide = false;
+
   meshes = null;
   materials = [];
   rawVertBuff = null;

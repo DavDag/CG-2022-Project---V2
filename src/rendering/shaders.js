@@ -319,7 +319,7 @@ export const SHADERS = {
     out vec4 oColor;
 
     void main() {
-      if (texture(uNorTex, fTex).w == 0.0) {
+      if (texture(uDepthTex, fTex).x == 1.0) {
         discard;
       }
 

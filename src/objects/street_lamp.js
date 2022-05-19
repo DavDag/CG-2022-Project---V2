@@ -40,7 +40,7 @@ export class StreetLamp {
     this.#ctx = gl;
     this.#loadAsync();
 
-    light_mng.addPL(new PLight(
+    light_mng.addPL(false, new PLight(
       // this.lightDir,
       this.lightPos,
       this.lightCol,

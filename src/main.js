@@ -6,22 +6,54 @@ import { CameraManager } from "./managers/camera_mng.js";
 import { Renderer } from "./rendering/renderer.js";
 import { Player } from "./objects/player.js";
 import { UpdateFps } from "./utils/fps_counter.js";
-import { Terrain } from "./objects/terrain.js";
-import { Debug, Vec3 } from "webgl-basic-lib";
+import { NUM_TILE, Terrain } from "./objects/terrain.js";
+import { Debug, Vec2, Vec3 } from "webgl-basic-lib";
 import { MaterialsManager } from "./managers/material_mng.js";
 import { StreetLamp } from "./objects/street_lamp.js";
+import { Building, B_TYPE_COMMERCIAL, B_TYPE_SUBURB } from "./objects/building.js";
+import { Street } from "./objects/street.js";
+import { Grass } from "./objects/grass.js";
+import { Tree } from "./objects/tree.js";
+  
+function addBuildings(typ, arr, off, rot, right, data) {
+  const acc = Vec3.Zeros().add(off);
+  const f = (right) ? -1 : 1;
+  data.forEach((v) => {
+    const [id, sz] = v;
+    arr.push(new Building(
+      typ,
+      id, sz,
+      acc.clone().add(new Vec3(f * sz / 2, 0, - f * sz / 2)),
+      rot
+    ));
+    acc.x += f * sz;
+  });
+}
 
-function CreateStreetLights() {
-  const lamps = [];
-  lamps.push(new StreetLamp(new Vec3(2, 0, 1), 90));
-  lamps.push(new StreetLamp(new Vec3(2, 0, 3), 90));
-  lamps.push(new StreetLamp(new Vec3(2, 0, 5), 90));
-  lamps.push(new StreetLamp(new Vec3(2, 0, 7), 90));
-  lamps.push(new StreetLamp(new Vec3(-2, 0, 1), 270));
-  lamps.push(new StreetLamp(new Vec3(-2, 0, 3), 270));
-  lamps.push(new StreetLamp(new Vec3(-2, 0, 5), 270));
-  lamps.push(new StreetLamp(new Vec3(-2, 0, 7), 270));
-  return lamps;
+function CreateTile() {
+  const objects = [];
+  
+  objects.push(new Terrain());
+  objects.push(new Street());
+  objects.push(new Grass(new Vec2(20, 20), new Vec2(19, 29), true));
+  objects.push(new Grass(new Vec2(-1, 0), new Vec2(19, 20), true));
+  objects.push(new Tree(0, new Vec3(10, 0, 10)));
+  objects.push(new Tree(1, new Vec3(11, 0, 11)));
+
+  // "City"
+  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 9), 0, true, [[4, 4], [1, 3], [2, 4], [3, 5], [5, 3],]);
+  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 13), 270, true, [[2, 3]]);
+  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 16), 270, true, [[5, 4]]);
+  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-5, 0, 14), 0, true, [[5, 6], [0, 4], [1, 5]]);
+
+  // "Outskirt"
+  addBuildings(B_TYPE_SUBURB, objects, new Vec3(1, 0, -12), 90, false, [[2, 4]]);
+  addBuildings(B_TYPE_SUBURB, objects, new Vec3(1, 0, -16), 90, false, [[0, 4]]);
+  addBuildings(B_TYPE_SUBURB, objects, new Vec3(10, 0, -12), 180, false, [[3, 5], [3, 5]]);
+  addBuildings(B_TYPE_SUBURB, objects, new Vec3(10, 0, -8), 0, true, [[1, 4]]);
+  addBuildings(B_TYPE_SUBURB, objects, new Vec3(-1, 0, -10), 270, true, [[4, 4]]);
+
+  return objects;
 }
 
 export class App {
@@ -32,11 +64,13 @@ export class App {
   #cameraMng = null;
   #materialMng = null;
 
+  hideBuildings = false;
+  hideCars = false;
+
   #renderer = null;
   #player = new Player();
   #objects = [
-    new Terrain(),
-    ... CreateStreetLights(),
+    ... CreateTile(),
   ];
 
   onResize(canvasSize, contextSize) {
@@ -56,6 +90,16 @@ export class App {
       }
       case "1": {
         Debug.Toggle();
+        break;
+      }
+      case "2": {
+        this.hideBuildings = !this.hideBuildings;
+        this.#objects.filter((obj) => obj instanceof Building).forEach((obj) => obj.obj.hide = this.hideBuildings);
+        break;
+      }
+      case "3": {
+        this.hideCars = !this.hideCars;
+        // this.#objects.filter((obj) => obj instanceof Car).forEach((obj) => obj.obj.hide = this.hideCars);
         break;
       }
       case "5": {
@@ -109,10 +153,10 @@ export class App {
     this.#player.setup(gl, this.#lightMng);
     this.#objects.forEach((obj) => obj.setup(gl, this.#lightMng));
 
-    this.#lightMng.addDL(new DLight(
-      new Vec3(0, -1, 0),
+    this.#lightMng.addDL(true, new DLight(
+      new Vec3(1, -1, 1).normalize(),
       new Vec3(1, 1, 1),
-      {amb: 0.01, dif: 0.2, spe: 0.1}
+      {amb: 0.5, dif: 0.8, spe: 0.1}
     ));
   }
 
@@ -122,6 +166,7 @@ export class App {
     this.#cameraMng.updatePlayerMat(this.#player.posDirMatrix);
 
     this.#uiMng.update(
+      this,
       this.#player,
       this.#lightMng,
       this.#cameraMng,

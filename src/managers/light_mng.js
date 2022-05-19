@@ -74,12 +74,22 @@ export class LightManager {
   #program = null;
   #sphere = null;
 
-  #DL = null;
-  #PL = [];
-  #SL = [];
+  // Day
+  #day = {
+    DL: null,
+    PL: [],
+    SL: [],
+  };
+
+  // Night
+  #night = {
+    DL: null,
+    PL: [],
+    SL: [],
+  };
 
   show = false;
-
+  isDay = true;
   dirLightsOff = false;
   pointLightsOff = false;
   spotLightsOff = false;
@@ -90,12 +100,16 @@ export class LightManager {
     this.#sphere = Icosahedron.asAdvancedShape(0).createBuffers(gl);
   }
 
-  addDL(DL) { this.#DL = DL; }
-  addPL(PL) { this.#PL.push(PL); }
-  addSL(SL) { this.#SL.push(SL); }
+  get src() { return ((this.isDay) ? this.#day : this.#night); }
+
+  addDL(forDay, DL) { ((forDay) ? this.#day : this.#night).DL = DL; }
+  addPL(forDay, PL) { ((forDay) ? this.#day : this.#night).PL.push(PL); }
+  addSL(forDay, SL) { ((forDay) ? this.#day : this.#night).SL.push(SL); }
 
   updateUniforms(prog) {
-    const DL = (this.#DL && !this.dirLightsOff) ? this.#DL : DEFAULT_DL;
+    const src = this.src;
+
+    const DL = (this.src.DL && !this.dirLightsOff) ? this.src.DL : DEFAULT_DL;
     prog["uDirectionalLight.dir"].update(DL.dir.values);
     prog["uDirectionalLight.col"].update(DL.col.values);
     prog["uDirectionalLight.amb"].update(DL.amb);
@@ -103,7 +117,7 @@ export class LightManager {
     prog["uDirectionalLight.spe"].update(DL.spe);
   
     for (let i = 0; i < NUM_PL; ++i) {
-      const PL = (this.#PL[i] && !this.pointLightsOff) ? this.#PL[i] : DEFAULT_PL;
+      const PL = (this.src.PL[i] && !this.pointLightsOff) ? this.src.PL[i] : DEFAULT_PL;
       prog["uPointLights[" + i + "].pos"].update(PL.pos.values);
       prog["uPointLights[" + i + "].col"].update(PL.col.values);
       prog["uPointLights[" + i + "].amb"].update(PL.amb);
@@ -115,7 +129,7 @@ export class LightManager {
     }
     
     for (let i = 0; i < NUM_SL; ++i) {
-      const SL = (this.#SL[i] && !this.spotLightsOff) ? this.#SL[i] : DEFAULT_SL;
+      const SL = (this.src.SL[i] && !this.spotLightsOff) ? this.src.SL[i] : DEFAULT_SL;
       prog["uSpotLights[" + i + "].dir"].update(SL.dir.values);
       prog["uSpotLights[" + i + "].pos"].update(SL.pos.values);
       prog["uSpotLights[" + i + "].col"].update(SL.col.values);
@@ -132,6 +146,7 @@ export class LightManager {
 
   draw(stack) {
     const gl = this.#ctx;
+    const src = this.src;
     if (!this.show) return;
 
     this.#program.use();
@@ -141,7 +156,7 @@ export class LightManager {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.#sphere.indibuff);
     this.#program.enableAttributes();
     
-    this.#PL.forEach((pl) => {
+    this.src.PL.forEach((pl) => {
       if (!pl) return;
       const curr = stack.push(Mat4.Identity().translate(pl.pos).scale(Vec3.All(0.125)));
       this.#program.uMatrix.update(curr.values);
@@ -149,7 +164,7 @@ export class LightManager {
       stack.pop();
     });
     
-    this.#SL.forEach((sl) => {
+    this.src.SL.forEach((sl) => {
       if (!sl) return;
       const curr = stack.push(Mat4.Identity().translate(sl.pos).scale(Vec3.All(0.125)));
       this.#program.uMatrix.update(curr.values);

@@ -28,6 +28,8 @@ export class UIManager {
 
       debugMeshes: document.getElementById("debugMeshes"),
       aaMethod: document.getElementById("aaMethod"),
+      showBuildings: document.getElementById("showBuildings"),
+      showCars: document.getElementById("showCars"),
       partResults: document.getElementById("partResults"),
 
       dirLights: document.getElementById("dirLights"),
@@ -41,6 +43,7 @@ export class UIManager {
   }
 
   update(
+    app,
     player,
     lightMng,
     cameraMng,
@@ -53,15 +56,19 @@ export class UIManager {
     const controller = player.controller;
     this.#docRef.accMeter.innerText = Math.abs(controller.acceleration).toFixed(1);
     this.#docRef.speedMeter.innerText = Math.abs(controller.speed).toFixed(1);
-
+    
     // Lights
     this.#docRef.dirLights.innerText = (!lightMng.dirLightsOff) ? "On" : "Off";
     this.#docRef.pointLights.innerText = (!lightMng.pointLightsOff) ? "On" : "Off";
     this.#docRef.spotLights.innerText = (!lightMng.spotLightsOff) ? "On" : "Off";
-    this.#docRef.showLightsPos.innerText = (!lightMng.show) ? "On" : "Off";
+    this.#docRef.showLightsPos.innerText = (lightMng.show) ? "On" : "Off";
+    
+    // Meshes
+    this.#docRef.debugMeshes.innerText = (Debug.isActive) ? "On" : "Off";
+    this.#docRef.showBuildings.innerText = (!app.hideBuildings) ? "On" : "Off";
+    this.#docRef.showCars.innerText = (!app.hideCars) ? "On" : "Off";
 
     // Debug
-    this.#docRef.debugMeshes.innerText = (Debug.isActive) ? "On" : "Off";
     this.#docRef.cameraName.innerText = cameraMng.current.name;
     this.#docRef.forceFollow.innerText = ["Camera-def", "Force-Follow", "Force-Un-Follow"][cameraMng.forceFollowPlayer];
 

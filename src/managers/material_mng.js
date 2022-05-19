@@ -59,13 +59,33 @@ export class MaterialsManager {
     this.#ctx = gl;
     this.#materials.debug = new MaterialData(TemporaryTexture(gl), DEF_PROPS);
 
+    // Terrain
+    this.#loadMaterial(
+      "terrain",
+      {
+        shininess: 2.0,
+      },
+      "Asphalt_004",
+      DEF_TILEABLE_CONFIGS(gl)
+    );
+
+    // Grass
+    this.#loadMaterial(
+      "grass",
+      {
+        shininess: 2.0,
+      },
+      "Grass_005",
+      DEF_TILEABLE_CONFIGS(gl)
+    );
+
     // Asphalt
     this.#loadMaterial(
       "asphalt",
       {
         shininess: 2.0,
       },
-      "Asphalt_004",
+      "Asphalt_005",
       DEF_TILEABLE_CONFIGS(gl)
     );
 
@@ -122,11 +142,66 @@ export class MaterialsManager {
       [1, 0.9762833, 0.9292453]
     );
 
+    this.#loadMaterialAsColor(
+      "border",
+      DEF_PROPS,
+      [0.5607843, 0.5686275, 0.6]
+    );
+
+    this.#loadMaterialAsColor(
+      "trim",
+      DEF_PROPS,
+      [0.7372549, 0.8862745, 1]
+    );
+
+    this.#loadMaterialAsColor(
+      "door",
+      DEF_PROPS,
+      [0.3882353, 0.4, 0.4470588]
+    );
+
+    this.#loadMaterialAsColor(
+      "roof",
+      DEF_PROPS,
+      [0.3372549, 0.7372549, 0.6]
+    );
+
+    this.#loadMaterialAsColor(
+      "wood",
+      DEF_PROPS,
+      [0.9098039, 0.6, 0.372549]
+    );
+
+    this.#loadMaterialAsColor(
+      "foliage",
+      DEF_PROPS,
+      [0.2666667, 0.8, 0.5803922]
+    );
+
+    this.#loadMaterialAsColor(
+      "rock",
+      DEF_PROPS,
+      [0.9098039, 0.8352941, 0.6745098]
+    );
+
+    this.#loadMaterialAsColor(
+      "foliageFall",
+      DEF_PROPS,
+      [1, 0.6313726, 0.2039216]
+    );
+
+    // White
+    this.#loadMaterialAsColor(
+      "white",
+      DEF_PROPS,
+      [1, 1, 1]
+    );
+
     // Default
     this.#loadMaterialAsColor(
       "_defaultMat",
       DEF_PROPS,
-      [1, 1, 1]
+      [0.764151, 0.764151, 0.764151]
     );
   }
 

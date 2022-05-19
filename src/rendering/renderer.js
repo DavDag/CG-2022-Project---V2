@@ -121,7 +121,7 @@ export class Renderer {
     const obj = object.obj;
     const mat = object.matrix;
 
-    if (!obj) return;
+    if (!obj || obj.hide) return;
 
     const gl = this.#ctx;
     const prog = this.#programs.default;
@@ -168,7 +168,7 @@ export class Renderer {
     const obj = object.obj;
     const mat = object.matrix;
 
-    if (!obj) return;
+    if (!obj || obj.hide) return;
 
     const gl = this.#ctx;
     const prog = this.#programs.debugdraw;
@@ -266,6 +266,11 @@ export class Renderer {
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB2);
       gl.viewport(0, 0, w, h);
+
+      gl.clearColor(0, 0, 0, 1);
+      gl.clearDepth(1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST);
 
       gl.drawBuffers([
         gl.COLOR_ATTACHMENT0,
