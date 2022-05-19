@@ -139,6 +139,12 @@ export class App {
         this.#lightMng.spotLightsOff = !this.#lightMng.spotLightsOff;
         break;
       }
+      case "g": {
+        this.#renderer.aaSamples = (this.#renderer.aaSamples == 0) ? 2 : this.#renderer.aaSamples * 2;
+        if (this.#renderer.aaSamples > this.#renderer.aaMaxSamples) this.#renderer.aaSamples = 0;
+        this.#renderer.updateSamples();
+        break;
+      }
       case "c": {
         this.#cameraMng.nextCamera();
         break;

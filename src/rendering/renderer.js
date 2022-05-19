@@ -18,6 +18,8 @@ export class Renderer {
   #offscreenColTex2 = null;
   #offscreenDepthTex2 = null;
 
+  aaSamples = 0;
+  aaMaxSamples = 0;
   showPartialResults = false;
 
   #quad = null;
@@ -45,7 +47,7 @@ export class Renderer {
     this.#offscreenDepthTex =  gl.createTexture();
 
     this.#offscreenFB2 = gl.createFramebuffer();
-    this.#offscreenColTex2 =  gl.createTexture();
+    this.#offscreenColTex2 =  gl.createRenderbuffer();
     this.#offscreenDepthTex2 =  gl.createRenderbuffer();
 
     this.#quad = Quad.asAdvancedShape().createBuffers(gl);
@@ -53,6 +55,8 @@ export class Renderer {
 
   onResize(size) {
     const gl = this.#ctx;
+    this.#size = size;
+    this.aaMaxSamples = gl.getParameter(gl.MAX_SAMPLES);
 
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size.w, size.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -82,22 +86,30 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-    gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex2);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size.w, size.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    // gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex2);
+    // gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size.w, size.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     gl.bindTexture(gl.TEXTURE_2D, null);
 
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenDepthTex2);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, size.w, size.h);
-
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    this.updateSamples(this.aaSamples);
 
     this.#bindAllToFB();
-    this.#size = size;
+  }
+
+  updateSamples() {
+    const gl = this.#ctx;
+    
+    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenDepthTex2);
+    // gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, this.#size.w, this.#size.h);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, this.aaSamples, gl.DEPTH24_STENCIL8, this.#size.w, this.#size.h);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenColTex2);
+    // gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGB8, this.#size.w, this.#size.h);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, this.aaSamples, gl.RGB8, this.#size.w, this.#size.h);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
   }
 
   #bindAllToFB() {
@@ -111,7 +123,7 @@ export class Renderer {
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB2);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#offscreenColTex2, 0);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, this.#offscreenColTex2);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, this.#offscreenDepthTex2);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -198,7 +210,7 @@ export class Renderer {
       prog.uColor.update(new Vec4(1, 0, 0, 1).values);
       gl.drawArrays(gl.POINTS, mesh.vBuffer.index, mesh.vBuffer.length);
 
-      prog.uColor.update(new Vec4(1.0, 1.0, 1.0, 0.2).values);
+      prog.uColor.update(new Vec4(1.0, 1.0, 1.0, 0.5).values);
       gl.drawElements(gl.LINES, mesh.lBuffer.length * 2, gl.UNSIGNED_SHORT, mesh.lBuffer.index);
 
       tmpStack.pop();

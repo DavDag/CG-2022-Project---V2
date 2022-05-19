@@ -59,7 +59,9 @@ export class UIManager {
       showCars: document.getElementById("showCars"),
       showEnvironment: document.getElementById("showEnvironment"),
       showPlayer: document.getElementById("showPlayer"),
+
       partResults: document.getElementById("partResults"),
+      aaSampleMethod: document.getElementById("aaSampleMethod"),
 
       dirLights: document.getElementById("dirLights"),
       pointLights: document.getElementById("pointLights"),
@@ -106,5 +108,6 @@ export class UIManager {
 
     // Rendering
     this.#docRef.partResults.innerHTML = (renderer.showPartialResults) ? ON : OFF;
+    this.#docRef.aaSampleMethod.innerHTML = CUSTOM((renderer.aaSamples == 0) ? "None" : "Native x" + renderer.aaSamples);
   }
 }
