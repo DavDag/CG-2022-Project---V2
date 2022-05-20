@@ -256,6 +256,14 @@ export class App {
         gl.canvasEl.classList.remove("fscreen");
       }
     });
+
+    this.#uiMng.updateRequested(
+      this,
+      this.#player,
+      this.#lightMng,
+      this.#cameraMng,
+      this.#renderer,
+    );
   }
 
   #update(dt) {

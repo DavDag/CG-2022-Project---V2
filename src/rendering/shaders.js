@@ -12,8 +12,10 @@ export function CreateProgramFromData(gl, dataGen) {
 }
 
 export const SSAO_SAMPLE_COUNT = 64;
-export const NUM_PL = 16;
-export const NUM_SL = 16;
+export const NUM_PL = 32;
+export const NUM_SL = 2;
+export const NUM_SHADOW_CASTER = 4;
+export const SHADOW_SIZE = 2048;
 
 export const SHADERS = {
 
@@ -373,6 +375,34 @@ export const SHADERS = {
     ],
   }),
 
+  SHADOW_MAP: (gl) => ({
+    vertex_shader_src: `#version 300 es
+    layout (location = 0) in vec3 vPos;
+    uniform mat4 uLightMat;
+    uniform mat4 uModel;
+    void main() {
+      gl_Position = uLightMat * uModel * vec4(vPos, 1.0);
+    }
+    `,
+
+    fragment_shader_src: `#version 300 es
+    precision highp float;
+    out vec4 oCol;
+    void main() {
+      // oCol = vec4(0, 1, 0, 1);
+    }
+    `,
+
+    attributes: [
+      ["vPos", 3, gl.FLOAT, 32,  0],
+    ],
+
+    uniforms: [
+      ["uLightMat", "Matrix4fv"],
+      ["uModel", "Matrix4fv"],
+    ],
+  }),
+
   DEFERRED: (gl) => ({
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
@@ -434,15 +464,18 @@ export const SHADERS = {
         float outerCutOff;
     };
 
-    vec3 CalcDLight(DLight light, vec3 color, vec3 normal, vec3 viewDir, float occ, Material material);
-    vec3 CalcPLight(PLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, float occ, Material material);
-    vec3 CalcSLight(SLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, float occ, Material material);
+    vec3 CalcDLight(DLight light, vec3 color, vec3 normal, vec3 viewDir, float occ, float invShadowF, Material material);
+    vec3 CalcPLight(PLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, float occ, float invShadowF, Material material);
+    vec3 CalcSLight(SLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, float occ, float invShadowF, Material material);
 
     uniform sampler2D uPosTex;
     uniform sampler2D uColTex;
     uniform sampler2D uNorTex;
     uniform sampler2D uDepthTex;
     uniform sampler2D uSSAOTex;
+
+    uniform mat4 uLightMat;
+    uniform sampler2D uShadowTex;
 
     uniform vec3 uViewPos;
     uniform DLight uDirectionalLight;
@@ -459,6 +492,7 @@ export const SHADERS = {
       vec4 texNor = texture(uNorTex, fTex);
       vec4 texDepth = texture(uDepthTex, fTex);
       vec4 texSSAO = texture(uSSAOTex, fTex);
+      vec4 texShadow = texture(uShadowTex, fTex);
 
       vec3 fPos = texPos.xyz;
       vec3 fCol = texCol.rgb;
@@ -466,8 +500,23 @@ export const SHADERS = {
       float fDepth = texDepth.x;
       float fOcc = texSSAO.x;
 
-      if (fDepth == 1.0) {
-        discard;
+      // if (fDepth == 1.0) {
+      //   discard;
+      // }
+
+      float invShadowF = 1.0;
+      {
+        vec4 fPosInLightSpace = uLightMat * texPos;
+        vec3 fPosInLightSpaceProjCoords = fPosInLightSpace.xyz / fPosInLightSpace.w;
+        fPosInLightSpaceProjCoords = fPosInLightSpaceProjCoords * 0.5 + 0.5;
+  
+        float closestDepth = texture(uShadowTex, fPosInLightSpaceProjCoords.xy).r;
+        float currentDepth = fPosInLightSpaceProjCoords.z;
+  
+        float bias = 0.005;
+        float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+
+        invShadowF = 1.0 - shadow;
       }
 
       Material material;
@@ -476,15 +525,17 @@ export const SHADERS = {
       vec3 viewDir = normalize(uViewPos - fPos);
       vec3 result = vec3(0, 0, 0);
 
-      result += CalcDLight(uDirectionalLight, fCol, fNor, viewDir, fOcc, material);
+      result += CalcDLight(uDirectionalLight, fCol, fNor, viewDir, fOcc, invShadowF, material);
       for (int p = 0; p < ${NUM_PL}; ++p) {
-        result += CalcPLight(uPointLights[p], fCol, fNor, fPos, viewDir, fOcc, material);
+        result += CalcPLight(uPointLights[p], fCol, fNor, fPos, viewDir, fOcc, invShadowF, material);
       }
       for (int s = 0; s < ${NUM_SL}; ++s) {
-        result += CalcSLight(uSpotLights[s], fCol, fNor, fPos, viewDir, fOcc, material);
+        result += CalcSLight(uSpotLights[s], fCol, fNor, fPos, viewDir, fOcc, invShadowF, material);
       }
 
       oColor = vec4(result, 1.0);
+      // oColor = vec4(vec3(shadow), 1.0);
+      // oColor = vec4(vec3(texShadow.x), 1.0);
     }
 
     vec3 CalcDLight(
@@ -493,6 +544,7 @@ export const SHADERS = {
       vec3 normal,
       vec3 viewDir,
       float occ,
+      float invShadowF,
       Material material
     ) {
       vec3 lightDir = normalize(-light.dir);
@@ -506,7 +558,7 @@ export const SHADERS = {
       vec3 diffuse = light.dif * light.col * diff * color;
       vec3 specular = light.spe * light.col * spec;
 
-      return (ambient + diffuse + specular);
+      return (ambient + invShadowF * (diffuse + specular));
     }
 
     vec3 CalcPLight(
@@ -516,6 +568,7 @@ export const SHADERS = {
       vec3 position,
       vec3 viewDir,
       float occ,
+      float invShadowF,
       Material material
     ) {
       vec3 lightDir = normalize(light.pos - position);
@@ -536,7 +589,7 @@ export const SHADERS = {
       diffuse *= attenuation;
       specular *= attenuation;
 
-      return (ambient + diffuse + specular);
+      return (ambient + invShadowF * (diffuse + specular));
     }
 
     vec3 CalcSLight(
@@ -546,6 +599,7 @@ export const SHADERS = {
       vec3 position,
       vec3 viewDir,
       float occ,
+      float invShadowF,
       Material material
     ) {
       vec3 lightDir = normalize(light.pos - position);
@@ -570,7 +624,7 @@ export const SHADERS = {
       diffuse *= attenuation * intensity;
       specular *= attenuation * intensity;
 
-      return (ambient + diffuse + specular);
+      return (ambient + invShadowF * (diffuse + specular));
     }
     `,
 
@@ -619,6 +673,9 @@ export const SHADERS = {
         ["uSpotLights[" + ind + "].cutOff", "1f"],
         ["uSpotLights[" + ind + "].outerCutOff", "1f"],
       ])).flat()),
+
+      ["uLightMat", "Matrix4fv"],
+      ["uShadowTex", "1i"],
     ],
   }),
 
