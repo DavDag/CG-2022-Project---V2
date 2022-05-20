@@ -46,9 +46,12 @@ function addCars(arr, off, rot, data) {
 
 function CreateTile() {
   const objects = [];
-  
-  objects.push(new Terrain());
-  objects.push(new Street());
+
+  // City
+  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 9), 0, true, [[4, 4], [1, 3], [2, 4], [3, 5], [5, 3],]);
+  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 13), 270, true, [[2, 3]]);
+  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 16), 270, true, [[5, 4]]);
+  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-5, 0, 14), 0, true, [[5, 6], [0, 4], [1, 5]]);
 
   // Green areas
   objects.push(new Grass(new Vec2(20, 20), new Vec2(19, 29), true));
@@ -74,14 +77,11 @@ function CreateTile() {
   objects.push(new PicNic(0, new Vec3(10, 0, 10), 127));
   objects.push(new PicNic(1, new Vec3(10, 0, 15), 200));
   
-  for (let x = 1; x < NUM_TILE / 2; ++x)
+  for (let x = 1; x < 20; ++x)
     objects.push(new Fence(new Vec3(-x - 0.5, 0, -0.5), 270));
-
-  // City
-  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 9), 0, true, [[4, 4], [1, 3], [2, 4], [3, 5], [5, 3],]);
-  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 13), 270, true, [[2, 3]]);
-  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 16), 270, true, [[5, 4]]);
-  addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-5, 0, 14), 0, true, [[5, 6], [0, 4], [1, 5]]);
+  
+  objects.push(new Street());
+  objects.push(new Terrain());
 
   // Parking
   addCars(objects, new Vec3(-2, 0, 1),   0, [0, 1, 2, 3, 4, 5, 6, 7, 2, 4, 7, 5, 7, 2, 1, 1, 0, 3, 6, 5, 3, 2, 1, 5]);
@@ -94,6 +94,16 @@ function CreateTile() {
   addBuildings(B_TYPE_SUBURB, objects, new Vec3(10, 0, -12), 180, false, [[3, 5], [3, 5]]);
   addBuildings(B_TYPE_SUBURB, objects, new Vec3(10, 0, -8), 0, true, [[1, 4]]);
   addBuildings(B_TYPE_SUBURB, objects, new Vec3(-1, 0, -10), 270, true, [[4, 4]]);
+
+  // Lamps
+  for (let z = -8; z < 20; z += 4)
+    objects.push(new StreetLamp(new Vec3(1, 0, z), 90));
+  for (let x = -2; x > -20; x -= 4) {
+    objects.push(new StreetLamp(new Vec3(x, 0, 6), 180));
+    objects.push(new StreetLamp(new Vec3(x, 0, 0.25), 180));
+  }
+  for (let x = 4; x < 20; x += 4)
+    objects.push(new StreetLamp(new Vec3(x, 0, -8.5), 0));
 
   return objects;
 }
@@ -215,7 +225,7 @@ export class App {
     this.#lightMng.addDL(true, new DLight(
       new Vec3(1, -1, 1).normalize(),
       new Vec3(1, 1, 1),
-      {amb: 0.5, dif: 0.8, spe: 0.1}
+      {amb: 0.5, dif: 0.8, spe: 0.2}
     ));
 
     window.addEventListener("resize", (e) => {

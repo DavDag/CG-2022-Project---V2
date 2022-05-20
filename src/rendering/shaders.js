@@ -362,6 +362,7 @@ export const SHADERS = {
       vec3 diffuse = light.dif * light.col * diff * color;
       vec3 specular = light.spe * light.col * spec;
 
+      // return specular;
       return (ambient + diffuse + specular);
     }
 

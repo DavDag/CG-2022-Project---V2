@@ -120,7 +120,9 @@ export class MaterialsManager {
     // TODO
     this.#loadMaterialAsColor(
       "window",
-      DEF_PROPS,
+      {
+        shininess: 64.0,
+      },
       [0.9372549, 0.9372549, 0.9372549]
     );
 
