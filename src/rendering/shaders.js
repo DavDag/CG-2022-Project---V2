@@ -500,12 +500,12 @@ export const SHADERS = {
       float fDepth = texDepth.x;
       float fOcc = texSSAO.x;
 
-      // if (fDepth == 1.0) {
-      //   discard;
-      // }
-
       float invShadowF = 1.0;
       {
+        ////////////////////////////////////
+        // Shadows
+        ////////////////////////////////////
+
         vec4 fPosInLightSpace = uLightMat * texPos;
         vec3 fPosInLightSpaceProjCoords = fPosInLightSpace.xyz / fPosInLightSpace.w;
         fPosInLightSpaceProjCoords = fPosInLightSpaceProjCoords * 0.5 + 0.5;
@@ -513,8 +513,10 @@ export const SHADERS = {
         float closestDepth = texture(uShadowTex, fPosInLightSpaceProjCoords.xy).r;
         float currentDepth = fPosInLightSpaceProjCoords.z;
   
-        float bias = 0.005;
+        float bias = 0.0001;
         float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+
+        if (fPosInLightSpaceProjCoords.z > 1.0) shadow = 0.0;
 
         invShadowF = 1.0 - shadow;
       }
@@ -525,106 +527,89 @@ export const SHADERS = {
       vec3 viewDir = normalize(uViewPos - fPos);
       vec3 result = vec3(0, 0, 0);
 
-      result += CalcDLight(uDirectionalLight, fCol, fNor, viewDir, fOcc, invShadowF, material);
-      for (int p = 0; p < ${NUM_PL}; ++p) {
-        result += CalcPLight(uPointLights[p], fCol, fNor, fPos, viewDir, fOcc, invShadowF, material);
+      {
+        ////////////////////////////////////
+        // Directional Light
+        ////////////////////////////////////
+        DLight light = uDirectionalLight;
+
+        vec3 lightDir = normalize(-light.dir);
+
+        float diff = max(dot(fNor, lightDir), 0.0);
+
+        vec3 reflectDir = reflect(-lightDir, fNor);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+
+        vec3 ambient = light.amb * light.col * fCol * fOcc;
+        vec3 diffuse = light.dif * light.col * diff * fCol;
+        vec3 specular = light.spe * light.col * spec;
+
+        result += (ambient + invShadowF * (diffuse + specular));
       }
+
+      for (int p = 0; p < ${NUM_PL}; ++p) {
+        {
+          ////////////////////////////////////
+          // Point Light
+          ////////////////////////////////////
+          PLight light = uPointLights[p];
+
+          vec3 lightDir = normalize(light.pos - fPos);
+    
+          float diff = max(dot(fNor, lightDir), 0.0);
+    
+          vec3 reflectDir = reflect(-lightDir, fNor);
+          float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    
+          float distance = length(light.pos - fPos);
+          float attenuation = 1.0 / (1.0 + light.lin * distance + light.qua * (distance * distance));
+    
+          vec3 ambient = light.amb * light.col * fCol * fOcc;
+          vec3 diffuse = light.dif * light.col * diff * fCol;
+          vec3 specular = light.spe * light.col * spec;
+    
+          ambient *= attenuation;
+          diffuse *= attenuation;
+          specular *= attenuation;
+    
+          result += (ambient + invShadowF * (diffuse + specular));
+        }
+      }
+
       for (int s = 0; s < ${NUM_SL}; ++s) {
-        result += CalcSLight(uSpotLights[s], fCol, fNor, fPos, viewDir, fOcc, invShadowF, material);
+        {
+          ////////////////////////////////////
+          // Spot Light
+          ////////////////////////////////////
+          SLight light = uSpotLights[s];
+          
+          vec3 lightDir = normalize(light.pos - fPos);
+
+          float diff = max(dot(fNor, lightDir), 0.0);
+
+          vec3 reflectDir = reflect(-lightDir, fNor);
+          float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+
+          float distance = length(light.pos - fPos);
+          float attenuation = 1.0 / (1.0 + light.lin * distance + light.qua * (distance * distance));    
+
+          float theta = dot(lightDir, normalize(-light.dir)); 
+          float epsilon = light.cutOff - light.outerCutOff;
+          float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
+
+          vec3 ambient = light.amb * light.col * fCol * fOcc;
+          vec3 diffuse = light.dif * light.col * diff * fCol;
+          vec3 specular = light.spe * light.col * spec;
+
+          ambient *= attenuation * intensity;
+          diffuse *= attenuation * intensity;
+          specular *= attenuation * intensity;
+
+          result += (ambient + invShadowF * (diffuse + specular));
+        }
       }
 
       oColor = vec4(result, 1.0);
-      // oColor = vec4(vec3(shadow), 1.0);
-      // oColor = vec4(vec3(texShadow.x), 1.0);
-    }
-
-    vec3 CalcDLight(
-      DLight light,
-      vec3 color,
-      vec3 normal,
-      vec3 viewDir,
-      float occ,
-      float invShadowF,
-      Material material
-    ) {
-      vec3 lightDir = normalize(-light.dir);
-
-      float diff = max(dot(normal, lightDir), 0.0);
-
-      vec3 reflectDir = reflect(-lightDir, normal);
-      float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-
-      vec3 ambient = light.amb * light.col * color * occ;
-      vec3 diffuse = light.dif * light.col * diff * color;
-      vec3 specular = light.spe * light.col * spec;
-
-      return (ambient + invShadowF * (diffuse + specular));
-    }
-
-    vec3 CalcPLight(
-      PLight light,
-      vec3 color,
-      vec3 normal,
-      vec3 position,
-      vec3 viewDir,
-      float occ,
-      float invShadowF,
-      Material material
-    ) {
-      vec3 lightDir = normalize(light.pos - position);
-
-      float diff = max(dot(normal, lightDir), 0.0);
-
-      vec3 reflectDir = reflect(-lightDir, normal);
-      float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-
-      float distance = length(light.pos - position);
-      float attenuation = 1.0 / (1.0 + light.lin * distance + light.qua * (distance * distance));
-
-      vec3 ambient = light.amb * light.col * color * occ;
-      vec3 diffuse = light.dif * light.col * diff * color;
-      vec3 specular = light.spe * light.col * spec;
-
-      ambient *= attenuation;
-      diffuse *= attenuation;
-      specular *= attenuation;
-
-      return (ambient + invShadowF * (diffuse + specular));
-    }
-
-    vec3 CalcSLight(
-      SLight light,
-      vec3 color,
-      vec3 normal,
-      vec3 position,
-      vec3 viewDir,
-      float occ,
-      float invShadowF,
-      Material material
-    ) {
-      vec3 lightDir = normalize(light.pos - position);
-
-      float diff = max(dot(normal, lightDir), 0.0);
-
-      vec3 reflectDir = reflect(-lightDir, normal);
-      float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-
-      float distance = length(light.pos - position);
-      float attenuation = 1.0 / (1.0 + light.lin * distance + light.qua * (distance * distance));    
-
-      float theta = dot(lightDir, normalize(-light.dir)); 
-      float epsilon = light.cutOff - light.outerCutOff;
-      float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
-
-      vec3 ambient = light.amb * light.col * color * occ;
-      vec3 diffuse = light.dif * light.col * diff * color;
-      vec3 specular = light.spe * light.col * spec;
-
-      ambient *= attenuation * intensity;
-      diffuse *= attenuation * intensity;
-      specular *= attenuation * intensity;
-
-      return (ambient + invShadowF * (diffuse + specular));
     }
     `,
 

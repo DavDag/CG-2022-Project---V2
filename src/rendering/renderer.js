@@ -375,8 +375,12 @@ export class Renderer {
       ]);
 
       gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(gl.FRONT);
       objects.forEach((object) => this.#drawForShadows(object, prog));
       this.#drawForShadows(player, prog);
+      gl.cullFace(gl.BACK);
+      gl.disable(gl.CULL_FACE);
       gl.disable(gl.DEPTH_TEST);
 
       prog.unbind();
