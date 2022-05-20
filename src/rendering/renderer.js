@@ -27,10 +27,10 @@ export class Renderer {
   #ssaoBlurFB = null;
   #ssaoBlurColTex = null;
 
-  #dirShadowsFB = [];
-  #dirShadowsDepthTex = [];
-  // #pointShadowsFB = [];
-  // #pointShadowsDepthTex = ;
+  #dirShadowsFB = null;
+  #dirShadowsDepthTex = null;
+  #pointShadowsFB = null;
+  #pointShadowsDepthTex = null;
 
   aaSamples = 0;
   aaMaxSamples = 0;
@@ -45,7 +45,8 @@ export class Renderer {
     debugdraw: null,
     ssao: null,
     ssaoblur: null,
-    shadowmap: null,
+    shadowmap_dl: null,
+    shadowmap_pl: null,
     deferred: null,
     textured: null,
   };
@@ -57,7 +58,7 @@ export class Renderer {
     this.#programs.debugdraw = CreateProgramFromData(gl, SHADERS.DEBUG_DRAW);
     this.#programs.ssao = CreateProgramFromData(gl, SHADERS.SSAO);
     this.#programs.ssaoblur = CreateProgramFromData(gl, SHADERS.SSAO_BLUR);
-    this.#programs.shadowmap = CreateProgramFromData(gl, SHADERS.SHADOW_MAP);
+    this.#programs.shadowmap_dl = CreateProgramFromData(gl, SHADERS.SHADOW_MAP_DL);
     this.#programs.deferred = CreateProgramFromData(gl, SHADERS.DEFERRED);
     this.#programs.textured = CreateProgramFromData(gl, SHADERS.TEXTURED);
 
@@ -80,6 +81,9 @@ export class Renderer {
 
     this.#dirShadowsFB = gl.createFramebuffer();
     this.#dirShadowsDepthTex = gl.createTexture();
+
+    this.#pointShadowsFB = gl.createFramebuffer();
+    this.#pointShadowsDepthTex = gl.createTexture();
 
     this.#quad = Quad.asAdvancedShape().createBuffers(gl);
     
@@ -150,7 +154,7 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     gl.bindTexture(gl.TEXTURE_2D, this.#dirShadowsDepthTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH24_STENCIL8, SHADOW_SIZE, SHADOW_SIZE, 0, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, SHADOW_SIZE, SHADOW_SIZE, 0, gl.RED, gl.FLOAT, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -196,7 +200,7 @@ export class Renderer {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#ssaoBlurColTex, 0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.#dirShadowsFB);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, this.#dirShadowsDepthTex, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#dirShadowsDepthTex, 0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
@@ -357,7 +361,7 @@ export class Renderer {
 
     // Shadows
     {
-      const prog = this.#programs.shadowmap;
+      const prog = this.#programs.shadowmap_dl;
       prog.use();
 
       prog.uLightMat.update(lightMat.values);
@@ -365,29 +369,45 @@ export class Renderer {
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.#dirShadowsFB);
       gl.viewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
 
-      gl.clearDepth(1.0);
-      gl.clear(gl.DEPTH_BUFFER_BIT);
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
 
       gl.drawBuffers([
-        gl.NONE,
+        gl.COLOR_ATTACHMENT0,
       ]);
 
       if (light_mng.isDay) {
         gl.enable(gl.DEPTH_TEST);
-        gl.enable(gl.CULL_FACE);
-        gl.cullFace(gl.FRONT);
-        gl.colorMask(false, false, false, false);
+        // gl.enable(gl.CULL_FACE);
+        // gl.cullFace(gl.FRONT);
         objects.forEach((object) => this.#drawForShadows(object, prog));
         this.#drawForShadows(player, prog);
-        gl.colorMask(true, true, true, true);
-        gl.cullFace(gl.BACK);
-        gl.disable(gl.CULL_FACE);
+        // gl.cullFace(gl.BACK);
+        // gl.disable(gl.CULL_FACE);
         gl.disable(gl.DEPTH_TEST);
       }
 
       prog.unbind();
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+      // {
+      //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#dirShadowsFB);
+      //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+        
+      //   // gl.viewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
+  
+      //   gl.drawBuffers([
+      //     gl.BACK,
+      //   ]);
+  
+      //   gl.blitFramebuffer(0, 0, SHADOW_SIZE, SHADOW_SIZE, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+  
+      //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+      //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+
+      //   return;
+      // }
     }
 
     // SSAO

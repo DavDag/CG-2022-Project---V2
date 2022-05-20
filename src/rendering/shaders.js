@@ -15,7 +15,7 @@ export const SSAO_SAMPLE_COUNT = 32;
 export const NUM_PL = 24;
 export const NUM_SL = 4;
 export const NUM_SHADOW_CASTER = 4;
-export const SHADOW_SIZE = 2048;
+export const SHADOW_SIZE = 8192;
 
 export const SHADERS = {
 
@@ -375,21 +375,58 @@ export const SHADERS = {
     ],
   }),
 
-  SHADOW_MAP: (gl) => ({
+  SHADOW_MAP_DL: (gl) => ({
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
     uniform mat4 uLightMat;
     uniform mat4 uModel;
+    out vec4 fPos;
     void main() {
       gl_Position = uLightMat * uModel * vec4(vPos, 1.0);
+      fPos = gl_Position;
     }
     `,
 
     fragment_shader_src: `#version 300 es
     precision highp float;
-    out vec4 oCol;
+    in vec4 fPos;
+    out float oCol;
     void main() {
-      // oCol = vec4(0, 1, 0, 1);
+      float depth = (fPos.z / fPos.w) * 0.5 + 0.5;
+      oCol = depth;
+    }
+    `,
+
+    attributes: [
+      ["vPos", 3, gl.FLOAT, 32,  0],
+    ],
+
+    uniforms: [
+      ["uLightMat", "Matrix4fv"],
+      ["uModel", "Matrix4fv"],
+    ],
+  }),
+
+  SHADOW_MAP_PL: (gl) => ({
+    vertex_shader_src: `#version 300 es
+    layout (location = 0) in vec3 vPos;
+    uniform mat4 uLightMat;
+    uniform mat4 uModel;
+    out vec4 fPos;
+    void main() {
+      gl_Position = uLightMat * uModel * vec4(vPos, 1.0);
+      fPos = gl_Position;
+    }
+    `,
+
+    fragment_shader_src: `#version 300 es
+    precision highp float;
+    in vec4 fPos;
+    out float oCol;
+    void main() {
+      float depth = (fPos.z / fPos.w) * 0.5 + 0.5;
+      oCol = depth;
+      gl_FragDepth = depth;
     }
     `,
 
@@ -492,7 +529,6 @@ export const SHADERS = {
       vec4 texNor = texture(uNorTex, fTex);
       vec4 texDepth = texture(uDepthTex, fTex);
       vec4 texSSAO = texture(uSSAOTex, fTex);
-      vec4 texShadow = texture(uShadowTex, fTex);
 
       vec3 fPos = texPos.xyz;
       vec3 fCol = texCol.rgb;
@@ -521,7 +557,7 @@ export const SHADERS = {
           // continue;
         }
   
-        float bias = 0.001;
+        float bias = 0.0003;
 
         // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
 
@@ -626,6 +662,7 @@ export const SHADERS = {
       }
 
       oColor = vec4(result, 1.0);
+      // oColor = vec4(vec3(invShadowF), 1.0);
     }
     `,
 
