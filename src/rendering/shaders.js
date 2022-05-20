@@ -1,4 +1,5 @@
 import { Program, Shader } from "webgl-basic-lib";
+import { SSAO_SAMPLE_COUNT } from "./ssao.js";
 
 export function CreateProgramFromData(gl, dataGen) {
   const data = dataGen(gl);
@@ -11,8 +12,8 @@ export function CreateProgramFromData(gl, dataGen) {
   return program;
 }
 
-export const NUM_PL = 32;
-export const NUM_SL = 32;
+export const NUM_PL = 16;
+export const NUM_SL = 16;
 
 export const SHADERS = {
 
@@ -239,6 +240,95 @@ export const SHADERS = {
     ],
   }),
 
+  SSAO: (gl) => ({
+    vertex_shader_src: `#version 300 es
+    layout (location = 0) in vec3 vPos;
+    layout (location = 1) in vec2 vTex;
+
+    uniform mat4 uMatrix;
+
+    out vec2 fTex;
+
+    void main() {
+      fTex = vTex;
+      gl_Position = uMatrix * vec4(vPos, 1.0);
+    }
+    `,
+
+    fragment_shader_src: `#version 300 es
+    precision highp float;
+
+    uniform sampler2D uPosTex;
+    uniform sampler2D uNorTex;
+    uniform sampler2D uDepthTex;
+    uniform sampler2D uNoiseTex;
+
+    uniform mat4 uViewProj;
+    uniform vec3 uSamples[${SSAO_SAMPLE_COUNT}];
+
+    const vec2 noiseScale = vec2(800.0 / 4.0, 600.0 / 4.0);
+
+    in vec2 fTex;
+
+    out vec4 oColor;
+
+    void main() {
+      vec4 texPos = texture(uPosTex, fTex);
+      vec4 texNor = texture(uNorTex, fTex);
+      vec4 texNoise = texture(uNoiseTex, fTex * noiseScale);
+
+      vec3 fPos = texPos.xyz;
+      vec3 fNor = texNor.xyz;
+      vec3 fRndVec = texNoise.xyz;
+
+      vec3 tangent = normalize(fRndVec - fNor * dot(fRndVec, fNor));
+      vec3 bitangent = cross(fNor, tangent);
+      mat3 TBN = mat3(tangent, bitangent, fNor);
+      
+      float radius = 0.5;
+      float bias = 0.025;
+
+      float occlusion = 0.0;
+
+      for (int s = 0; s < ${SSAO_SAMPLE_COUNT}; ++s) {
+        vec3 samplingPos = TBN * uSamples[s];
+        samplingPos = fPos + samplingPos * radius;
+
+        vec4 offset = vec4(samplingPos, 1.0);
+        offset = uViewProj * offset;
+        offset.xyz /= offset.w;
+        offset.xyz = offset.xyz * 0.5 + 0.5;
+
+        float depth = texture(uPosTex, offset.xy).z;
+        float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fPos.z - depth));
+        occlusion += ((depth >= samplingPos.z + bias) ? 1.0 : 0.0) * rangeCheck;
+      }
+
+      occlusion = 1.0 - occlusion / float(${SSAO_SAMPLE_COUNT});
+
+      oColor = vec4(occlusion, 0, 0, 1);
+    }
+    `,
+
+    attributes: [
+      ["vPos", 3, gl.FLOAT, 32,  0],
+      ["vTex", 2, gl.FLOAT, 32, 12],
+    ],
+
+    uniforms: [
+      ["uMatrix", "Matrix4fv"],
+      ["uViewProj", "Matrix4fv"],
+      ["uPosTex", "1i"],
+      ["uNorTex", "1i"],
+      ["uDepthTex", "1i"],
+      ["uNoiseTex", "1i"],
+
+      ...new Array(SSAO_SAMPLE_COUNT).fill(null).map((_, ind) => ([
+        ["uSamples[" + ind + "]", "3fv"],
+      ]).flat()),
+    ],
+  }),
+
   DEFERRED: (gl) => ({
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
@@ -300,14 +390,15 @@ export const SHADERS = {
         float outerCutOff;
     };
 
-    vec3 CalcDLight(DLight light, vec3 color, vec3 normal, vec3 viewDir, Material material);
-    vec3 CalcPLight(PLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, Material material);
-    vec3 CalcSLight(SLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, Material material);
+    vec3 CalcDLight(DLight light, vec3 color, vec3 normal, vec3 viewDir, float occ, Material material);
+    vec3 CalcPLight(PLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, float occ, Material material);
+    vec3 CalcSLight(SLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, float occ, Material material);
 
     uniform sampler2D uPosTex;
     uniform sampler2D uColTex;
     uniform sampler2D uNorTex;
     uniform sampler2D uDepthTex;
+    uniform sampler2D uSSAOTex;
 
     uniform vec3 uViewPos;
     uniform DLight uDirectionalLight;
@@ -323,11 +414,13 @@ export const SHADERS = {
       vec4 texCol = texture(uColTex, fTex);
       vec4 texNor = texture(uNorTex, fTex);
       vec4 texDepth = texture(uDepthTex, fTex);
+      vec4 texSSAO = texture(uSSAOTex, fTex);
 
       vec3 fPos = texPos.xyz;
       vec3 fCol = texCol.rgb;
       vec3 fNor = texNor.xyz;
       float fDepth = texDepth.x;
+      float fOcc = texSSAO.x;
 
       if (fDepth == 1.0) {
         discard;
@@ -339,12 +432,12 @@ export const SHADERS = {
       vec3 viewDir = normalize(uViewPos - fPos);
       vec3 result = vec3(0, 0, 0);
 
-      result += CalcDLight(uDirectionalLight, fCol, fNor, viewDir, material);
+      result += CalcDLight(uDirectionalLight, fCol, fNor, viewDir, fOcc, material);
       for (int p = 0; p < ${NUM_PL}; ++p) {
-        result += CalcPLight(uPointLights[p], fCol, fNor, fPos, viewDir, material);
+        result += CalcPLight(uPointLights[p], fCol, fNor, fPos, viewDir, fOcc, material);
       }
       for (int s = 0; s < ${NUM_SL}; ++s) {
-        result += CalcSLight(uSpotLights[s], fCol, fNor, fPos, viewDir, material);
+        result += CalcSLight(uSpotLights[s], fCol, fNor, fPos, viewDir, fOcc, material);
       }
 
       oColor = vec4(result, 1.0);
@@ -355,6 +448,7 @@ export const SHADERS = {
       vec3 color,
       vec3 normal,
       vec3 viewDir,
+      float occ,
       Material material
     ) {
       vec3 lightDir = normalize(-light.dir);
@@ -364,7 +458,7 @@ export const SHADERS = {
       vec3 reflectDir = reflect(-lightDir, normal);
       float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
 
-      vec3 ambient = light.amb * light.col * color;
+      vec3 ambient = light.amb * light.col * color * occ;
       vec3 diffuse = light.dif * light.col * diff * color;
       vec3 specular = light.spe * light.col * spec;
 
@@ -377,6 +471,7 @@ export const SHADERS = {
       vec3 normal,
       vec3 position,
       vec3 viewDir,
+      float occ,
       Material material
     ) {
       vec3 lightDir = normalize(light.pos - position);
@@ -389,7 +484,7 @@ export const SHADERS = {
       float distance = length(light.pos - position);
       float attenuation = 1.0 / (1.0 + light.lin * distance + light.qua * (distance * distance));
 
-      vec3 ambient = light.amb * light.col * color;
+      vec3 ambient = light.amb * light.col * color * occ;
       vec3 diffuse = light.dif * light.col * diff * color;
       vec3 specular = light.spe * light.col * spec;
 
@@ -406,6 +501,7 @@ export const SHADERS = {
       vec3 normal,
       vec3 position,
       vec3 viewDir,
+      float occ,
       Material material
     ) {
       vec3 lightDir = normalize(light.pos - position);
@@ -422,7 +518,7 @@ export const SHADERS = {
       float epsilon = light.cutOff - light.outerCutOff;
       float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
 
-      vec3 ambient = light.amb * light.col * color;
+      vec3 ambient = light.amb * light.col * color * occ;
       vec3 diffuse = light.dif * light.col * diff * color;
       vec3 specular = light.spe * light.col * spec;
 
@@ -447,6 +543,7 @@ export const SHADERS = {
       ["uColTex", "1i"],
       ["uNorTex", "1i"],
       ["uDepthTex", "1i"],
+      ["uSSAOTex", "1i"],
 
       ["uDirectionalLight.dir", "3fv"],
       ["uDirectionalLight.col", "3fv"],

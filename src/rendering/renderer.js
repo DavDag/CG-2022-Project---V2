@@ -1,5 +1,6 @@
 import { Debug, Mat4, MatrixStack, Program, Quad, toRad, Vec2, Vec3, Vec4 } from "webgl-basic-lib";
 import { CreateProgramFromData, SHADERS } from "./shaders.js";
+import { CreateSSAOKernels, CreateSSAONoise, SSAO_SAMPLE_COUNT, UpdateSSAOUniforms } from "./ssao.js";
 
 export class Renderer {
   /** @type {WebGL2RenderingContext} */
@@ -18,6 +19,13 @@ export class Renderer {
   #offscreenColTex2 = null;
   #offscreenDepthTex2 = null;
 
+  #ssaoKernels = [];
+  #ssaoNoise = [];
+  #ssaoNoiseRaw = null;
+  #ssaoFB = null;
+  #ssaoColTex = null;
+  #ssaoNoiseTex = null;
+
   aaSamples = 0;
   aaMaxSamples = 0;
   showPartialResults = false;
@@ -28,6 +36,7 @@ export class Renderer {
     default: null,
     debugview: null,
     debugdraw: null,
+    ssao: null,
     deferred: null,
     textured: null,
   };
@@ -37,6 +46,7 @@ export class Renderer {
     this.#programs.default = CreateProgramFromData(gl, SHADERS.DEFAULT);
     this.#programs.debugview = CreateProgramFromData(gl, SHADERS.DEBUG_VIEW);
     this.#programs.debugdraw = CreateProgramFromData(gl, SHADERS.DEBUG_DRAW);
+    this.#programs.ssao = CreateProgramFromData(gl, SHADERS.SSAO, SSAO_SAMPLE_COUNT);
     this.#programs.deferred = CreateProgramFromData(gl, SHADERS.DEFERRED);
     this.#programs.textured = CreateProgramFromData(gl, SHADERS.TEXTURED);
 
@@ -50,7 +60,15 @@ export class Renderer {
     this.#offscreenColTex2 =  gl.createRenderbuffer();
     this.#offscreenDepthTex2 =  gl.createRenderbuffer();
 
+    this.#ssaoFB = gl.createFramebuffer();
+    this.#ssaoColTex = gl.createTexture();
+    this.#ssaoNoiseTex = gl.createTexture();
+
     this.#quad = Quad.asAdvancedShape().createBuffers(gl);
+    
+    this.#ssaoKernels = CreateSSAOKernels(SSAO_SAMPLE_COUNT);
+    this.#ssaoNoise = CreateSSAONoise(16);
+    this.#ssaoNoiseRaw = new Float32Array(this.#ssaoNoise.map((v) => [...v.values]).flat());
   }
 
   onResize(size) {
@@ -93,6 +111,21 @@ export class Renderer {
     // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
+    gl.bindTexture(gl.TEXTURE_2D, this.#ssaoColTex);
+    // gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, size.w, size.h, 0, gl.RED, gl.FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, size.w, size.h, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.bindTexture(gl.TEXTURE_2D, this.#ssaoNoiseTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB32F, 4, 4, 0, gl.RGB, gl.FLOAT, this.#ssaoNoiseRaw);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     this.updateSamples(this.aaSamples);
@@ -125,6 +158,9 @@ export class Renderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB2);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, this.#offscreenColTex2);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, this.#offscreenDepthTex2);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.#ssaoFB);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#ssaoColTex, 0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
@@ -260,6 +296,54 @@ export class Renderer {
       gl.disable(gl.DEPTH_TEST);
     }
 
+    // SSAO
+    {
+      const kernels = this.#ssaoKernels;
+      const prog = this.#programs.ssao;
+      prog.use();
+
+      prog.uMatrix.update(quadMatRev.values);
+      prog.uPosTex.update(0);
+      prog.uNorTex.update(1);
+      prog.uDepthTex.update(2);
+      prog.uNoiseTex.update(3);
+      for (let k = 0; k < kernels.length; ++k) {
+        prog["uSamples[" + k + "]"].update(kernels[k].values);
+      }
+      prog.uViewProj.update(camera.viewproj.values);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#ssaoFB);
+      gl.viewport(0, 0, w, h);
+
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      gl.drawBuffers([
+        gl.COLOR_ATTACHMENT0,
+      ]);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, quad.vertbuff);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.indibuff);
+      prog.enableAttributes();
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.#offscreenPosTex);
+      gl.activeTexture(gl.TEXTURE0 + 1);
+      gl.bindTexture(gl.TEXTURE_2D, this.#offscreenNorTex);
+      gl.activeTexture(gl.TEXTURE0 + 2);
+      gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
+      gl.activeTexture(gl.TEXTURE0 + 3);
+      gl.bindTexture(gl.TEXTURE_2D, this.#ssaoNoiseTex);
+
+      gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
+
+      prog.disableAttributes();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+      prog.unbind();
+    }
+
     // Deferred pass
     {
       const prog = (this.showPartialResults) ? this.#programs.debugview : this.#programs.deferred;
@@ -270,6 +354,7 @@ export class Renderer {
       prog.uPosTex.update(1);
       prog.uNorTex.update(2);
       prog.uDepthTex.update(3);
+      prog.uSSAOTex.update(4);
 
       if (!this.showPartialResults) {
         prog.uViewPos.update(camera.viewpos.values);
@@ -300,6 +385,8 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D, this.#offscreenNorTex);
       gl.activeTexture(gl.TEXTURE0 + 3);
       gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
+      gl.activeTexture(gl.TEXTURE0 + 4);
+      gl.bindTexture(gl.TEXTURE_2D, this.#ssaoColTex);
 
       gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
 
