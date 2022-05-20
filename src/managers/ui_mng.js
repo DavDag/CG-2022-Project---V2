@@ -44,12 +44,13 @@ export class UIManager {
   }
 
   #loadFromDocument() {
+    const gl = this.#ctx;
+
     this.#docRef = {
       extraFunctions: document.getElementsByClassName("extraFunctions"),
 
       canvasSize: document.getElementById("canvasSize"),
       fpsCounter: document.getElementById("fpsCounter"),
-      totVertexCount: document.getElementById("totVertexCount"),
 
       accMeter: document.getElementById("accMeter"),
       speedMeter: document.getElementById("speedMeter"),
@@ -72,7 +73,18 @@ export class UIManager {
 
       cameraName: document.getElementById("cameraName"),
       forceFollow: document.getElementById("forceFollow"),
+      
+      vendor: document.getElementById("vendor"),
+      renderer: document.getElementById("renderer"),
+      totVertexCount: document.getElementById("totVertexCount"),
     }
+
+    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+    const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+    
+    this.#docRef.vendor.innerHTML = CUSTOM(vendor);
+    this.#docRef.renderer.innerHTML = CUSTOM(renderer);
   }
 
   update(
@@ -87,7 +99,7 @@ export class UIManager {
     // General
     this.#docRef.canvasSize.innerHTML = `${gl.canvasEl.width} x ${gl.canvasEl.height}`;
     this.#docRef.fpsCounter.innerHTML = Math.abs(FPS).toFixed(1);
-    this.#docRef.totVertexCount.innerHTML = global_data_counter.totVert();
+    this.#docRef.totVertexCount.innerHTML = CUSTOM(global_data_counter.totVert());
     
     // Player
     const controller = player.controller;
