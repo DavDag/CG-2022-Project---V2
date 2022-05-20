@@ -11,9 +11,9 @@ export function CreateProgramFromData(gl, dataGen) {
   return program;
 }
 
-export const SSAO_SAMPLE_COUNT = 64;
-export const NUM_PL = 32;
-export const NUM_SL = 2;
+export const SSAO_SAMPLE_COUNT = 32;
+export const NUM_PL = 24;
+export const NUM_SL = 4;
 export const NUM_SHADOW_CASTER = 4;
 export const SHADOW_SIZE = 2048;
 
@@ -500,6 +500,9 @@ export const SHADERS = {
       float fDepth = texDepth.x;
       float fOcc = texSSAO.x;
 
+      if (fDepth == 1.0) discard;
+
+      float shadow = 0.0;
       float invShadowF = 1.0;
       {
         ////////////////////////////////////
@@ -512,11 +515,24 @@ export const SHADERS = {
   
         float closestDepth = texture(uShadowTex, fPosInLightSpaceProjCoords.xy).r;
         float currentDepth = fPosInLightSpaceProjCoords.z;
-  
-        float bias = 0.0001;
-        float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
 
-        if (fPosInLightSpaceProjCoords.z > 1.0) shadow = 0.0;
+        if (fPosInLightSpaceProjCoords.z > 1.0) {
+          shadow = 0.0;
+          // continue;
+        }
+  
+        float bias = 0.001;
+
+        // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+
+        vec2 texelSize = 1.0 / vec2(textureSize(uShadowTex, 0));
+        for (int x = -1; x <= 1; ++x) {
+          for (int y = -1; y <= 1; ++y) {
+            float pcfDepth = texture(uShadowTex, fPosInLightSpaceProjCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+          }
+        }
+        shadow /= 9.0;
 
         invShadowF = 1.0 - shadow;
       }

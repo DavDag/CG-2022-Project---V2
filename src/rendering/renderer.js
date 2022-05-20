@@ -374,51 +374,20 @@ export class Renderer {
         gl.NONE,
       ]);
 
-      gl.enable(gl.DEPTH_TEST);
-      gl.enable(gl.CULL_FACE);
-      gl.cullFace(gl.FRONT);
-      objects.forEach((object) => this.#drawForShadows(object, prog));
-      this.#drawForShadows(player, prog);
-      gl.cullFace(gl.BACK);
-      gl.disable(gl.CULL_FACE);
-      gl.disable(gl.DEPTH_TEST);
+      if (light_mng.isDay) {
+        gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.FRONT);
+        objects.forEach((object) => this.#drawForShadows(object, prog));
+        this.#drawForShadows(player, prog);
+        gl.cullFace(gl.BACK);
+        gl.disable(gl.CULL_FACE);
+        gl.disable(gl.DEPTH_TEST);
+      }
 
       prog.unbind();
-      
-      // {
-      //   const prog = this.#programs.textured;
-      //   prog.use();
-  
-      //   prog.uMatrix.update(quadMatRev.values);
-      //   prog.uTexture.update(0);
-  
-      //   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      //   gl.viewport(0, 0, w, h);
-  
-      //   gl.clearColor(0, 0, 0, 1);
-      //   gl.clear(gl.COLOR_BUFFER_BIT);
-  
-      //   gl.drawBuffers([
-      //     gl.BACK,
-      //   ]);
-  
-      //   gl.bindBuffer(gl.ARRAY_BUFFER, quad.vertbuff);
-      //   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.indibuff);
-      //   prog.enableAttributes();
-  
-      //   gl.activeTexture(gl.TEXTURE0);
-      //   gl.bindTexture(gl.TEXTURE_2D, this.#shadowsDepthTex[0]);
-  
-      //   gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
-  
-      //   prog.disableAttributes();
-      //   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-      //   gl.bindBuffer(gl.ARRAY_BUFFER, null);
-  
-      //   prog.unbind();
-  
-      //   return;
-      // }
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
     // SSAO
