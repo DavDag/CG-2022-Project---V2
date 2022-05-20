@@ -1,7 +1,5 @@
 import { Vec3 } from "webgl-basic-lib";
 
-export const SSAO_SAMPLE_COUNT = 16;
-
 function Lerp(a, b, f) {
   return a + f * (b - a);
 }

@@ -1,5 +1,4 @@
 import { Program, Shader } from "webgl-basic-lib";
-import { SSAO_SAMPLE_COUNT } from "./ssao.js";
 
 export function CreateProgramFromData(gl, dataGen) {
   const data = dataGen(gl);
@@ -12,6 +11,7 @@ export function CreateProgramFromData(gl, dataGen) {
   return program;
 }
 
+export const SSAO_SAMPLE_COUNT = 64;
 export const NUM_PL = 16;
 export const NUM_SL = 16;
 
@@ -270,7 +270,7 @@ export const SHADERS = {
 
     in vec2 fTex;
 
-    out vec4 oColor;
+    out float oColor;
 
     void main() {
       vec4 texPos = texture(uPosTex, fTex);
@@ -306,7 +306,7 @@ export const SHADERS = {
 
       occlusion = 1.0 - occlusion / float(${SSAO_SAMPLE_COUNT});
 
-      oColor = vec4(occlusion, 0, 0, 1);
+      oColor = occlusion;
     }
     `,
 
@@ -326,6 +326,50 @@ export const SHADERS = {
       ...new Array(SSAO_SAMPLE_COUNT).fill(null).map((_, ind) => ([
         ["uSamples[" + ind + "]", "3fv"],
       ]).flat()),
+    ],
+  }),
+
+  SSAO_BLUR: (gl) => ({
+    vertex_shader_src: `#version 300 es
+    layout (location = 0) in vec3 vPos;
+    layout (location = 1) in vec2 vTex;
+    uniform mat4 uMatrix;
+    out vec2 fTex;
+    void main() {
+      fTex = vTex;
+      gl_Position = uMatrix * vec4(vPos, 1.0);
+    }
+    `,
+
+    fragment_shader_src: `#version 300 es
+    precision highp float;
+    uniform sampler2D uTexture;
+    in vec2 fTex;
+    out float oCol;
+    void main() {
+      vec2 texelSize = 1.0 / vec2(textureSize(uTexture, 0));
+      
+      float result = 0.0;
+
+      for (int x = -2; x < 2; ++x) {
+        for (int y = -2; y < 2; ++y) {
+          vec2 offset = vec2(float(x), float(y)) * texelSize;
+          result += texture(uTexture, fTex + offset).r;
+        }
+      }
+
+      oCol = result / (4.0 * 4.0);
+    }
+    `,
+
+    attributes: [
+      ["vPos", 3, gl.FLOAT, 32,  0],
+      ["vTex", 2, gl.FLOAT, 32, 12],
+    ],
+
+    uniforms: [
+      ["uMatrix", "Matrix4fv"],
+      ["uTexture", "1i"],
     ],
   }),
 

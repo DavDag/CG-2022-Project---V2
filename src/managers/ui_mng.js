@@ -70,6 +70,7 @@ export class UIManager {
       spotLights: document.getElementById("spotLights"),
       showLightsPos: document.getElementById("showLightsPos"),
       isDay: document.getElementById("isDay"),
+      ssaoResults: document.getElementById("ssaoResults"),
 
       cameraName: document.getElementById("cameraName"),
       forceFollow: document.getElementById("forceFollow"),
@@ -87,7 +88,8 @@ export class UIManager {
     this.#docRef.renderer.innerHTML = CUSTOM(renderer);
   }
 
-  update(
+  #update(
+    forceAll,
     app,
     player,
     lightMng,
@@ -97,35 +99,60 @@ export class UIManager {
     const gl = this.#ctx;
 
     // General
-    this.#docRef.canvasSize.innerHTML = `${gl.canvasEl.width} x ${gl.canvasEl.height}`;
     this.#docRef.fpsCounter.innerHTML = Math.abs(FPS).toFixed(1);
-    this.#docRef.totVertexCount.innerHTML = CUSTOM(global_data_counter.totVert());
     
     // Player
     const controller = player.controller;
     this.#docRef.accMeter.innerHTML = Math.abs(controller.acceleration).toFixed(1);
     this.#docRef.speedMeter.innerHTML = Math.abs(controller.speed).toFixed(1);
-    
-    // Lights
-    this.#docRef.dirLights.innerHTML = (!lightMng.dirLightsOff) ? ON : OFF;
-    this.#docRef.pointLights.innerHTML = (!lightMng.pointLightsOff) ? ON : OFF;
-    this.#docRef.spotLights.innerHTML = (!lightMng.spotLightsOff) ? ON : OFF;
-    this.#docRef.showLightsPos.innerHTML = (lightMng.show) ? ON : OFF;
-    this.#docRef.isDay.innerHTML = CUSTOM((lightMng.isDay) ? "Day" : "Night");
-    
-    // Meshes
-    this.#docRef.debugMeshes.innerHTML = (Debug.isActive) ? ON : OFF;
-    this.#docRef.showBuildings.innerHTML = (!app.hideBuildings) ? ON : OFF;
-    this.#docRef.showCars.innerHTML = (!app.hideCars) ? ON : OFF;
-    this.#docRef.showEnvironment.innerHTML = (!app.hideEnvironment) ? ON : OFF;
-    this.#docRef.showPlayer.innerHTML = (!app.hidePlayer) ? ON : OFF;
 
-    // Debug
-    this.#docRef.cameraName.innerHTML = CUSTOM(cameraMng.current.name);
-    this.#docRef.forceFollow.innerHTML = CUSTOM(["Camera-def", "Force-Follow", "Force-Un-Follow"][cameraMng.forceFollowPlayer]);
+    if (forceAll) {
+      // General
+      this.#docRef.canvasSize.innerHTML = `${gl.canvasEl.width} x ${gl.canvasEl.height}`;
+      this.#docRef.totVertexCount.innerHTML = CUSTOM(global_data_counter.totVert());
+      
+      // Lights
+      this.#docRef.dirLights.innerHTML = (!lightMng.dirLightsOff) ? ON : OFF;
+      this.#docRef.pointLights.innerHTML = (!lightMng.pointLightsOff) ? ON : OFF;
+      this.#docRef.spotLights.innerHTML = (!lightMng.spotLightsOff) ? ON : OFF;
+      this.#docRef.showLightsPos.innerHTML = (lightMng.show) ? ON : OFF;
+      this.#docRef.isDay.innerHTML = CUSTOM((lightMng.isDay) ? "Day" : "Night");
+      
+      // Meshes
+      this.#docRef.debugMeshes.innerHTML = (Debug.isActive) ? ON : OFF;
+      this.#docRef.showBuildings.innerHTML = (!app.hideBuildings) ? ON : OFF;
+      this.#docRef.showCars.innerHTML = (!app.hideCars) ? ON : OFF;
+      this.#docRef.showEnvironment.innerHTML = (!app.hideEnvironment) ? ON : OFF;
+      this.#docRef.showPlayer.innerHTML = (!app.hidePlayer) ? ON : OFF;
+  
+      // Debug
+      this.#docRef.cameraName.innerHTML = CUSTOM(cameraMng.current.name);
+      this.#docRef.forceFollow.innerHTML = CUSTOM(["Camera-def", "Force-Follow", "Force-Un-Follow"][cameraMng.forceFollowPlayer]);
+  
+      // Rendering
+      this.#docRef.partResults.innerHTML = (renderer.showPartialResults) ? ON : OFF;
+      this.#docRef.aaSampleMethod.innerHTML = CUSTOM((renderer.aaSamples == 0) ? "None" : "Native x" + renderer.aaSamples);
+      this.#docRef.ssaoResults.innerHTML = (renderer.showOccResults) ? ON : OFF;
+    }
+  }
 
-    // Rendering
-    this.#docRef.partResults.innerHTML = (renderer.showPartialResults) ? ON : OFF;
-    this.#docRef.aaSampleMethod.innerHTML = CUSTOM((renderer.aaSamples == 0) ? "None" : "Native x" + renderer.aaSamples);
+  updateRequested(
+    app,
+    player,
+    lightMng,
+    cameraMng,
+    renderer,
+  ) {
+    this.#update(true, app, player, lightMng, cameraMng, renderer);
+  }
+
+  updateRealTime(
+    app,
+    player,
+    lightMng,
+    cameraMng,
+    renderer,
+  ) {
+    this.#update(false, app, player, lightMng, cameraMng, renderer);
   }
 }
