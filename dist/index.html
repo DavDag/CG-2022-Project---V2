@@ -41,6 +41,7 @@
     <div class="mborder" style="position: absolute; top: 0px; left: 0px; padding: 4px; color: #fff;">
       <span>
         [WASD / Arrows] to move the car<br>
+        [C] Change Camera: <span id="cameraName"></span><br>
         [Shift] extras<br>
         <span class="extraFunctions" hidden>
           <hr>
@@ -57,9 +58,9 @@
           [8] PointLights: <span id="pointLights"></span><br>
           [9] SpotLights: <span id="spotLights"></span><br>
           [L] Hide/Show lights position: <span id="showLightsPos"></span><br>
+          [N] Toggle Day/Night Time: <span id="isDay"></span><br>
           <hr>
           [R] Reset Player position<br>
-          [C] Change Camera: <span id="cameraName"></span><br>
           [F] Force follow: <span id="forceFollow"></span><br>
           [F11] To enter Full Screen<br>
           <hr>
@@ -69,10 +70,10 @@
 
     <!-- Debug Data -->
     <div style="position: absolute; left: 50%; top: 0px; margin: auto; padding: 4px; color: #fff;">
-      <span id="canvasSize"></span> (Size)<br>
-      <span id="fpsCounter"></span> (FPS)<br>
+      (Size) <span id="canvasSize"></span><br>
+      (FPS) <span id="fpsCounter"></span><br>
       <span class="extraFunctions" hidden>
-        <span id="totVertexCount"></span> (#Vertices)<br>
+        (#Vertexes) <span id="totVertexCount"></span><br>
       </span>
     </div>
 

@@ -68,6 +68,7 @@ export class UIManager {
       pointLights: document.getElementById("pointLights"),
       spotLights: document.getElementById("spotLights"),
       showLightsPos: document.getElementById("showLightsPos"),
+      isDay: document.getElementById("isDay"),
 
       cameraName: document.getElementById("cameraName"),
       forceFollow: document.getElementById("forceFollow"),
@@ -98,6 +99,7 @@ export class UIManager {
     this.#docRef.pointLights.innerHTML = (!lightMng.pointLightsOff) ? ON : OFF;
     this.#docRef.spotLights.innerHTML = (!lightMng.spotLightsOff) ? ON : OFF;
     this.#docRef.showLightsPos.innerHTML = (lightMng.show) ? ON : OFF;
+    this.#docRef.isDay.innerHTML = CUSTOM((lightMng.isDay) ? "Day" : "Night");
     
     // Meshes
     this.#docRef.debugMeshes.innerHTML = (Debug.isActive) ? ON : OFF;

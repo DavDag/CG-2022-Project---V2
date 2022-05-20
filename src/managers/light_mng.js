@@ -109,7 +109,7 @@ export class LightManager {
   updateUniforms(prog) {
     const src = this.src;
 
-    const DL = (this.src.DL && !this.dirLightsOff) ? this.src.DL : DEFAULT_DL;
+    const DL = (src.DL && !this.dirLightsOff) ? src.DL : DEFAULT_DL;
     prog["uDirectionalLight.dir"].update(DL.dir.values);
     prog["uDirectionalLight.col"].update(DL.col.values);
     prog["uDirectionalLight.amb"].update(DL.amb);
@@ -117,7 +117,7 @@ export class LightManager {
     prog["uDirectionalLight.spe"].update(DL.spe);
   
     for (let i = 0; i < NUM_PL; ++i) {
-      const PL = (this.src.PL[i] && !this.pointLightsOff) ? this.src.PL[i] : DEFAULT_PL;
+      const PL = (src.PL[i] && !this.pointLightsOff) ? src.PL[i] : DEFAULT_PL;
       prog["uPointLights[" + i + "].pos"].update(PL.pos.values);
       prog["uPointLights[" + i + "].col"].update(PL.col.values);
       prog["uPointLights[" + i + "].amb"].update(PL.amb);
@@ -129,7 +129,7 @@ export class LightManager {
     }
     
     for (let i = 0; i < NUM_SL; ++i) {
-      const SL = (this.src.SL[i] && !this.spotLightsOff) ? this.src.SL[i] : DEFAULT_SL;
+      const SL = (src.SL[i] && !this.spotLightsOff) ? src.SL[i] : DEFAULT_SL;
       prog["uSpotLights[" + i + "].dir"].update(SL.dir.values);
       prog["uSpotLights[" + i + "].pos"].update(SL.pos.values);
       prog["uSpotLights[" + i + "].col"].update(SL.col.values);
@@ -156,7 +156,7 @@ export class LightManager {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.#sphere.indibuff);
     this.#program.enableAttributes();
     
-    this.src.PL.forEach((pl) => {
+    src.PL.forEach((pl) => {
       if (!pl) return;
       const curr = stack.push(Mat4.Identity().translate(pl.pos).scale(Vec3.All(0.125)));
       this.#program.uMatrix.update(curr.values);
@@ -164,7 +164,7 @@ export class LightManager {
       stack.pop();
     });
     
-    this.src.SL.forEach((sl) => {
+    src.SL.forEach((sl) => {
       if (!sl) return;
       const curr = stack.push(Mat4.Identity().translate(sl.pos).scale(Vec3.All(0.125)));
       this.#program.uMatrix.update(curr.values);
