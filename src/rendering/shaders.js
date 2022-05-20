@@ -319,16 +319,22 @@ export const SHADERS = {
     out vec4 oColor;
 
     void main() {
-      if (texture(uDepthTex, fTex).x == 1.0) {
+      vec4 texPos = texture(uPosTex, fTex);
+      vec4 texCol = texture(uColTex, fTex);
+      vec4 texNor = texture(uNorTex, fTex);
+      vec4 texDepth = texture(uDepthTex, fTex);
+
+      vec3 fPos = texPos.xyz;
+      vec3 fCol = texCol.rgb;
+      vec3 fNor = texNor.xyz;
+      float fDepth = texDepth.x;
+
+      if (fDepth == 1.0) {
         discard;
       }
 
-      vec3 fPos = texture(uPosTex, fTex).xyz;
-      vec3 fCol = texture(uColTex, fTex).rgb;
-      vec3 fNor = texture(uNorTex, fTex).xyz;
-      float fDepth = texture(uDepthTex, fTex).x;
       Material material;
-      material.shininess = texture(uColTex, fTex).a;
+      material.shininess = texCol.a;
 
       vec3 viewDir = normalize(uViewPos - fPos);
       vec3 result = vec3(0, 0, 0);
