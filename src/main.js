@@ -244,6 +244,12 @@ export class App {
       {amb: 0.5, dif: 0.8, spe: 0.2}
     ));
 
+    this.#lightMng.addDL(false, new DLight(
+      new Vec3(1, -1, 1).normalize(),
+      new Vec3(1, 1, 1),
+      {amb: 0.05, dif: 0.1, spe: 0.0}
+    ));
+
     window.addEventListener("resize", (e) => {
       const maxHeight = window.screen.height;
       const maxWidth = window.screen.width;

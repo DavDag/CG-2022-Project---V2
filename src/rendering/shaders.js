@@ -12,8 +12,8 @@ export function CreateProgramFromData(gl, dataGen) {
 }
 
 export const SSAO_SAMPLE_COUNT = 32;
-export const NUM_PL = 24;
-export const NUM_SL = 4;
+export const NUM_PL = 4;
+export const NUM_SL = 32;
 export const NUM_SHADOW_CASTER = 4;
 export const HIGH_SHADOW_SIZE = 8192;
 export const SMALL_SHADOW_SIZE = 512;
@@ -555,7 +555,7 @@ export const SHADERS = {
           float closestDepth = texture(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy, 0)).r;
           float currentDepth = fPosInLightSpaceProjCoords.z;
     
-          float bias = 0.0005;
+          float bias = 0.00005;
 
           spotShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
 
@@ -567,6 +567,8 @@ export const SHADERS = {
           // float far = 75.0;
           // float near = 0.1;
           // spotShadow = (2.0 * near * far) / (far + near - z * (far - near));
+
+          spotShadow = 0.0;
         }
 
         invShadowF = 1.0 - min(dirShadow + spotShadow, 1.0);
@@ -661,7 +663,7 @@ export const SHADERS = {
       }
 
       oColor = vec4(result, 1.0);
-      oColor = vec4(vec3(invShadowF), 1.0);
+      // oColor = vec4(vec3(invShadowF), 1.0);
       // oColor = vec4(vec3(spotShadow), 1.0);
     }
     `,

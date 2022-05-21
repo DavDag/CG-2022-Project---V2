@@ -101,8 +101,8 @@ export class LightManager {
   }
 
   get src() { return ((this.isDay) ? this.#day : this.#night); }
-  spotLightPos(index) { return (this.src.SL[index] ?? DEFAULT_SL).pos; }
-  spotLightDir(index) { return (this.src.SL[index] ?? DEFAULT_SL).dir; }
+  spotLightPos(index) { return (this.src.SL[index + 2] ?? DEFAULT_SL).pos; }
+  spotLightDir(index) { return (this.src.SL[index + 2] ?? DEFAULT_SL).dir; }
 
   addDL(forDay, DL) { ((forDay) ? this.#day : this.#night).DL = DL; }
   addPL(forDay, PL) { ((forDay) ? this.#day : this.#night).PL.push(PL); }

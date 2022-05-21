@@ -444,13 +444,13 @@ export class Renderer {
         ]);
 
         if (!light_mng.isDay) {
+          const lightDir = light_mng.spotLightDir(0).clone();
           const lightPos = light_mng.spotLightPos(0).clone();
-          const lightDir = light_mng.spotLightDir(0).clone().negate();
         
           spotLightMat.push(
             Mat4.Identity()
-            .apply(Mat4.Perspective(toRad(45), 1.0, 2.0, 75.0))
-            .apply(Mat4.LookAt(lightPos, lightPos.clone().sub(lightDir), new Vec3(0, 1, 0)))
+            .apply(Mat4.Perspective(toRad(45), 1.0, 0.1, 75.0))
+            .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(0, 1, 0)))
           );
           prog.uLightMat.update(spotLightMat.at(-1).values);        
 

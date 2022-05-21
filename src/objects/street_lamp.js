@@ -1,5 +1,5 @@
 import { Mat4, toRad, Vec3, Vec4 } from "webgl-basic-lib";
-import { PLight } from "../managers/light_mng.js";
+import { PLight, SLight } from "../managers/light_mng.js";
 import { OnObjCreated, OnObjLoaded } from "../managers/ui_mng.js";
 import { OBJGraph } from "../utils/obj_loader.js";
 
@@ -21,7 +21,7 @@ export class StreetLamp {
 
   get obj() { return __static_obj; }
   get matrix() { return this.#cachedMat; }
-  // get lightDir() { return new Vec3(0, -1, 0); }
+  get lightDir() { return new Vec3(0, -1, 0); }
   get lightPos() { return this.#cachedLightPos; }
   get lightCol() { return new Vec3(1, 1, 1); }
 
@@ -45,14 +45,14 @@ export class StreetLamp {
     this.#ctx = gl;
     this.#loadAsync();
 
-    light_mng.addPL(false, new PLight(
-      // this.lightDir,
+    light_mng.addSL(false, new SLight(
+      this.lightDir,
       this.lightPos,
       this.lightCol,
       {amb: 0.00, dif: 1.0, spe: 0.5},
-      {lin: 0.7, qua: 1.2},
-      // Math.cos(toRad(15)),
-      // Math.cos(toRad(35)),
+      {lin: 0.1, qua: 0.05},
+      Math.cos(toRad(55)),
+      Math.cos(toRad(85)),
     ));
   }
 
