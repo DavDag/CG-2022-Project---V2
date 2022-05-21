@@ -14,7 +14,7 @@ export function CreateProgramFromData(gl, dataGen) {
 export const SSAO_SAMPLE_COUNT = 32;
 export const NUM_PL = 4;
 export const NUM_SL = 32;
-export const NUM_SHADOW_CASTER = 4;
+export const NUM_SHADOW_CASTER = 32;
 export const HIGH_SHADOW_SIZE = 8192;
 export const SMALL_SHADOW_SIZE = 512;
 
@@ -548,6 +548,7 @@ export const SHADERS = {
           }
         }
 
+        float currSpotShadow = 0.0;
         for (int i = 0; i < uUseSpotLightForShadow; ++i) {
           ////////////////////////////////////
           // Shadows: Spot Light
@@ -566,19 +567,21 @@ export const SHADERS = {
     
           float bias = 0.05;
 
-          spotShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+          currSpotShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
 
           if (fPosInLightSpaceProjCoords.z > 1.0) {
-            spotShadow = 0.0;
+            currSpotShadow = 0.0;
           }
 
           if (fPosInLightSpaceProjCoords.x > 1.0 || fPosInLightSpaceProjCoords.x < 0.0
             || fPosInLightSpaceProjCoords.y > 1.0 || fPosInLightSpaceProjCoords.y < 0.0) {
-            spotShadow = 0.0;
+            currSpotShadow = 0.0;
           }
 
           float distance = min(length(fPosInLightSpace.xy), 1.0);
-          spotShadow *= 1.0 - distance;
+          currSpotShadow *= 1.0 - distance;
+
+          spotShadow += currSpotShadow;
         }
 
         invShadowF = 1.0 - min(dirShadow + spotShadow, 1.0);

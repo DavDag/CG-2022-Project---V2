@@ -428,42 +428,44 @@ export class Renderer {
       prog.use();
 
       {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
-        gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.#spotShadowsDepthTex, 0, 0);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
-        gl.viewport(0, 0, SMALL_SHADOW_SIZE, SMALL_SHADOW_SIZE);
-
-        gl.clearColor(0, 0, 0, 1);
-        gl.clearDepth(1.0);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        gl.drawBuffers([
-          gl.COLOR_ATTACHMENT0,
-        ]);
-
         if (!light_mng.isDay) {
-          const lightPos = light_mng.spotLightPos(4).clone();
-          const lightDir = light_mng.spotLightDir(4).clone();
-
-          // console.log(lightPos.toString(2), lightDir.toString(2));
-        
-          spotLightMat.push(
-            Mat4.Identity()
-            .apply(Mat4.Perspective(toRad(150), 1.0, 0.1, 10.0))
-            .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(-1, 0, 0)))
-          );
-          prog.uLightMat.update(spotLightMat.at(-1).values);        
-
-          gl.enable(gl.DEPTH_TEST);
-          // gl.enable(gl.CULL_FACE);
-          // gl.cullFace(gl.FRONT);
-          objects.forEach((object) => this.#drawForShadows(object, prog));
-          this.#drawForShadows(player, prog);
-          // gl.cullFace(gl.BACK);
-          // gl.disable(gl.CULL_FACE);
-          gl.disable(gl.DEPTH_TEST);
+          for (let i = 0; i < light_mng.spotLightCount; ++i) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
+            gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.#spotShadowsDepthTex, 0, i);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
+            gl.viewport(0, 0, SMALL_SHADOW_SIZE, SMALL_SHADOW_SIZE);
+    
+            gl.clearColor(0, 0, 0, 1);
+            gl.clearDepth(1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    
+            gl.drawBuffers([
+              gl.COLOR_ATTACHMENT0,
+            ]);
+    
+            const lightPos = light_mng.spotLightPos(i + 2).clone();
+            const lightDir = light_mng.spotLightDir(i + 2).clone();
+  
+            // console.log(lightPos.toString(2), lightDir.toString(2));
+          
+            spotLightMat.push(
+              Mat4.Identity()
+              .apply(Mat4.Perspective(toRad(150), 1.0, 0.1, 10.0))
+              .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(-1, 0, 0)))
+            );
+            prog.uLightMat.update(spotLightMat.at(-1).values);        
+  
+            gl.enable(gl.DEPTH_TEST);
+            // gl.enable(gl.CULL_FACE);
+            // gl.cullFace(gl.FRONT);
+            objects.forEach((object) => this.#drawForShadows(object, prog));
+            this.#drawForShadows(player, prog);
+            // gl.cullFace(gl.BACK);
+            // gl.disable(gl.CULL_FACE);
+            gl.disable(gl.DEPTH_TEST);
+            }
         }
       }
 

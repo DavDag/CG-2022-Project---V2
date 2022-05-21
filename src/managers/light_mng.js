@@ -101,6 +101,8 @@ export class LightManager {
   }
 
   get src() { return ((this.isDay) ? this.#day : this.#night); }
+
+  get spotLightCount() { return this.src.SL.length - 2; }
   spotLightPos(index) { return (this.src.SL[index] ?? DEFAULT_SL).pos; }
   spotLightDir(index) { return (this.src.SL[index] ?? DEFAULT_SL).dir; }
 
