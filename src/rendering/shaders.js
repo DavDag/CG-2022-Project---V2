@@ -1,5 +1,7 @@
 import { Program, Shader } from "webgl-basic-lib";
 
+import DeferredFS from '!raw-loader!./shaders/deferred.fs';
+
 export function CreateProgramFromData(gl, dataGen) {
   const data = dataGen(gl);
   const program = new Program(gl);
@@ -12,9 +14,9 @@ export function CreateProgramFromData(gl, dataGen) {
 }
 
 export const SSAO_SAMPLE_COUNT = 32;
+export const NUM_SHADOW_CASTER = 32;
 export const NUM_PL = 4;
 export const NUM_SL = 32;
-export const NUM_SHADOW_CASTER = 32;
 export const HIGH_SHADOW_SIZE = 4096;
 export const SMALL_SHADOW_SIZE = 512;
 
@@ -419,279 +421,15 @@ export const SHADERS = {
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
     layout (location = 1) in vec2 vTex;
-
     uniform mat4 uMatrix;
-
     out vec2 fTex;
-
     void main() {
       fTex = vTex;
       gl_Position = uMatrix * vec4(vPos, 1.0);
     }
     `,
 
-    fragment_shader_src: `#version 300 es
-    precision highp float;
-    precision highp int;
-    precision highp sampler2DArray;
-
-    struct Material {
-      float shininess;
-    };
-
-    struct DLight {
-      vec3 dir;
-      vec3 col;
-
-      float amb;
-      float dif;
-      float spe;
-    };
-
-    struct PLight {
-      vec3 pos;
-      vec3 col;
-  
-      float amb;
-      float dif;
-      float spe;
-      
-      // float con;
-      float lin;
-      float qua;
-    };
-
-    struct SLight {
-        vec3 dir;
-        vec3 pos;
-        vec3 col;
-      
-        float amb;
-        float dif;
-        float spe;
-      
-        // float con;
-        float lin;
-        float qua;
-
-        float cutOff;
-        float outerCutOff;
-    };
-
-    uniform sampler2D uPosTex;
-    uniform sampler2D uColTex;
-    uniform sampler2D uNorTex;
-    uniform sampler2D uDepthTex;
-    uniform sampler2D uSSAOTex;
-
-    uniform int uUseDirLightForShadow;
-    uniform mat4 uDirLightMat;
-    uniform sampler2D uDirShadowTex;
-
-    uniform int uUseSpotLightForShadow;
-    uniform mat4 uSpotLightMat[${NUM_SHADOW_CASTER}];
-    uniform sampler2DArray uSpotShadowTexArr;
-
-    uniform vec3 uViewPos;
-    uniform DLight uDirectionalLight;
-    uniform PLight uPointLights[${NUM_PL}];
-    uniform SLight uSpotLights[${NUM_SL}];
-
-    in vec2 fTex;
-
-    out vec4 oColor;
-
-    void main() {
-      vec4 texPos = texture(uPosTex, fTex);
-      vec4 texCol = texture(uColTex, fTex);
-      vec4 texNor = texture(uNorTex, fTex);
-      vec4 texDepth = texture(uDepthTex, fTex);
-      vec4 texSSAO = texture(uSSAOTex, fTex);
-
-      vec3 fPos = texPos.xyz;
-      vec3 fCol = texCol.rgb;
-      vec3 fNor = texNor.xyz;
-      float fDepth = texDepth.x;
-      float fOcc = texSSAO.x;
-
-      if (fDepth == 1.0) discard;
-
-      float dirShadow = 0.0;
-      float spotShadow = 0.0;
-      float invShadowF = 1.0;
-      {
-        if (uUseDirLightForShadow == 1) {
-          ////////////////////////////////////
-          // Shadows: Dir Light
-          ////////////////////////////////////
-
-          vec4 fPosInLightSpace = uDirLightMat * texPos;
-          vec3 fPosInLightSpaceProjCoords = fPosInLightSpace.xyz / fPosInLightSpace.w;
-          fPosInLightSpaceProjCoords = fPosInLightSpaceProjCoords * 0.5 + 0.5;
-    
-          float closestDepth = texture(uDirShadowTex, fPosInLightSpaceProjCoords.xy).r;
-          float currentDepth = fPosInLightSpaceProjCoords.z;
-    
-          float bias = 0.0003;
-
-          // dirShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
-
-          vec2 texelSize = 1.0 / vec2(textureSize(uDirShadowTex, 0));
-          for (int x = -1; x <= 1; ++x) {
-            for (int y = -1; y <= 1; ++y) {
-              float pcfDepth = texture(uDirShadowTex, fPosInLightSpaceProjCoords.xy + vec2(x, y) * texelSize).r;
-              dirShadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
-            }
-          }
-          dirShadow /= 9.0;
-
-          if (fPosInLightSpaceProjCoords.z > 1.0) {
-            dirShadow = 0.0;
-          }
-        }
-
-        float currSpotShadow = 0.0;
-        for (int i = 0; i < uUseSpotLightForShadow; ++i) {
-          ////////////////////////////////////
-          // Shadows: Spot Light
-          ////////////////////////////////////
-
-          vec4 fPosInLightSpace = uSpotLightMat[i] * texPos;
-          vec3 fPosInLightSpaceProjCoords = fPosInLightSpace.xyz / fPosInLightSpace.w;
-          fPosInLightSpaceProjCoords = fPosInLightSpaceProjCoords * 0.5 + 0.5;
-    
-          float closestDepth = textureLod(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy, i), 0.0).r;
-          float currentDepth = fPosInLightSpaceProjCoords.z;
-
-          float far = 10.0;
-          float near = 0.1;
-          currentDepth = (2.0 * near * far) / (far + near - currentDepth * (far - near));
-    
-          // float bias = 0.005;
-          float bias = max(0.05 * (1.0 - dot(fNor, vec3(0, -1, 0))), 0.005);
-
-          // currSpotShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
-
-          vec2 texelSize = 1.0 / vec3(textureSize(uSpotShadowTexArr, 0)).xy;
-          for (int x = -1; x <= 1; ++x) {
-            for (int y = -1; y <= 1; ++y) {
-              float pcfDepth = textureLod(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy + vec2(x, y) * texelSize, i), 0.0).r;
-              currSpotShadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
-            }
-          }
-          currSpotShadow /= 9.0;
-
-          if (fPosInLightSpaceProjCoords.z > 1.0) {
-            currSpotShadow = 0.0;
-          }
-
-          if (fPosInLightSpaceProjCoords.x > 1.0 || fPosInLightSpaceProjCoords.x < 0.0
-            || fPosInLightSpaceProjCoords.y > 1.0 || fPosInLightSpaceProjCoords.y < 0.0) {
-            currSpotShadow = 0.0;
-          }
-
-          float distance = min(length(fPosInLightSpace.xy), 1.0);
-          currSpotShadow *= 1.0 - distance;
-
-          spotShadow += currSpotShadow;
-        }
-
-        invShadowF = 1.0 - min(dirShadow + spotShadow, 1.0);
-      }
-
-      Material material;
-      material.shininess = texCol.a;
-
-      vec3 viewDir = normalize(uViewPos - fPos);
-      vec3 result = vec3(0, 0, 0);
-
-      {
-        ////////////////////////////////////
-        // Directional Light
-        ////////////////////////////////////
-        DLight light = uDirectionalLight;
-
-        vec3 lightDir = normalize(-light.dir);
-
-        float diff = max(dot(fNor, lightDir), 0.0);
-
-        vec3 reflectDir = reflect(-lightDir, fNor);
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-
-        vec3 ambient = light.amb * light.col * fCol * fOcc;
-        vec3 diffuse = light.dif * light.col * diff * fCol;
-        vec3 specular = light.spe * light.col * spec;
-
-        result += (ambient + invShadowF * (diffuse + specular));
-      }
-
-      for (int p = 0; p < ${NUM_PL}; ++p) {
-        {
-          ////////////////////////////////////
-          // Point Light
-          ////////////////////////////////////
-          PLight light = uPointLights[p];
-
-          vec3 lightDir = normalize(light.pos - fPos);
-    
-          float diff = max(dot(fNor, lightDir), 0.0);
-    
-          vec3 reflectDir = reflect(-lightDir, fNor);
-          float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-    
-          float distance = length(light.pos - fPos);
-          float attenuation = 1.0 / (1.0 + light.lin * distance + light.qua * (distance * distance));
-    
-          vec3 ambient = light.amb * light.col * fCol * fOcc;
-          vec3 diffuse = light.dif * light.col * diff * fCol;
-          vec3 specular = light.spe * light.col * spec;
-    
-          ambient *= attenuation;
-          diffuse *= attenuation;
-          specular *= attenuation;
-    
-          result += (ambient + invShadowF * (diffuse + specular));
-        }
-      }
-
-      for (int s = 0; s < ${NUM_SL}; ++s) {
-        {
-          ////////////////////////////////////
-          // Spot Light
-          ////////////////////////////////////
-          SLight light = uSpotLights[s];
-          
-          vec3 lightDir = normalize(light.pos - fPos);
-
-          float diff = max(dot(fNor, lightDir), 0.0);
-
-          vec3 reflectDir = reflect(-lightDir, fNor);
-          float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-
-          float distance = length(light.pos - fPos);
-          float attenuation = 1.0 / (1.0 + light.lin * distance + light.qua * (distance * distance));    
-
-          float theta = dot(lightDir, normalize(-light.dir)); 
-          float epsilon = light.cutOff - light.outerCutOff;
-          float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
-
-          vec3 ambient = light.amb * light.col * fCol * fOcc;
-          vec3 diffuse = light.dif * light.col * diff * fCol;
-          vec3 specular = light.spe * light.col * spec;
-
-          ambient *= attenuation * intensity;
-          diffuse *= attenuation * intensity;
-          specular *= attenuation * intensity;
-
-          result += (ambient + invShadowF * (diffuse + specular));
-        }
-      }
-
-      oColor = vec4(result, 1.0);
-      // oColor = vec4(vec3(invShadowF), 1.0);
-      // oColor = vec4(vec3(spotShadow), 1.0);
-    }
-    `,
+    fragment_shader_src: DeferredFS,
 
     attributes: [
       ["vPos", 3, gl.FLOAT, 32,  0],
