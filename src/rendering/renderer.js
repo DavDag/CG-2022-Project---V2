@@ -28,14 +28,17 @@ export class Renderer {
   #ssaoBlurColTex = null;
 
   #dirShadowsFB = null;
+  #dirShadowsColTex = null;
   #dirShadowsDepthTex = null;
   #spotShadowsFB = null;
+  #spotShadowsColTex = null;
   #spotShadowsDepthTex = null;
 
   aaSamples = 0;
   aaMaxSamples = 0;
   showPartialResults = false;
   showOccResults = false;
+  showDirLightDepthTex = false;
 
   #quad = null;
 
@@ -79,9 +82,11 @@ export class Renderer {
     this.#ssaoBlurColTex = gl.createTexture();
 
     this.#dirShadowsFB = gl.createFramebuffer();
+    this.#dirShadowsColTex = gl.createTexture();
     this.#dirShadowsDepthTex = gl.createTexture();
 
     this.#spotShadowsFB = gl.createFramebuffer();
+    this.#spotShadowsColTex = gl.createTexture();
     this.#spotShadowsDepthTex = gl.createTexture();
 
     this.#quad = Quad.asAdvancedShape().createBuffers(gl);
@@ -145,8 +150,22 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-    gl.bindTexture(gl.TEXTURE_2D, this.#dirShadowsDepthTex);
+    gl.bindTexture(gl.TEXTURE_2D, this.#dirShadowsColTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, HIGH_SHADOW_SIZE, HIGH_SHADOW_SIZE, 0, gl.RED, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.bindTexture(gl.TEXTURE_2D, this.#dirShadowsDepthTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH24_STENCIL8, HIGH_SHADOW_SIZE, HIGH_SHADOW_SIZE, 0, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.bindTexture(gl.TEXTURE_2D, this.#spotShadowsDepthTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH24_STENCIL8, SMALL_SHADOW_SIZE, SMALL_SHADOW_SIZE, 0, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -154,7 +173,7 @@ export class Renderer {
     
     gl.bindTexture(gl.TEXTURE_2D, null);
 
-    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.#spotShadowsDepthTex);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.#spotShadowsColTex);
     gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.R32F, SMALL_SHADOW_SIZE, SMALL_SHADOW_SIZE, NUM_SHADOW_CASTER, 0, gl.RED, gl.FLOAT, null);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -172,11 +191,11 @@ export class Renderer {
     const gl = this.#ctx;
     
     gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenDepthTex2);
-    // gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, this.#size.w, this.#size.h);
-    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, this.aaSamples, gl.DEPTH24_STENCIL8, this.#size.w, this.#size.h);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, this.#size.w, this.#size.h);
+    // gl.renderbufferStorageMultisample(gl.RENDERBUFFER, this.aaSamples, gl.DEPTH24_STENCIL8, this.#size.w, this.#size.h);
     gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenColTex2);
-    // gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGB8, this.#size.w, this.#size.h);
-    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, this.aaSamples, gl.RGB8, this.#size.w, this.#size.h);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGB8, this.#size.w, this.#size.h);
+    // gl.renderbufferStorageMultisample(gl.RENDERBUFFER, this.aaSamples, gl.RGB8, this.#size.w, this.#size.h);
     gl.bindRenderbuffer(gl.RENDERBUFFER, null);
   }
 
@@ -201,10 +220,12 @@ export class Renderer {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#ssaoBlurColTex, 0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.#dirShadowsFB);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#dirShadowsDepthTex, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#dirShadowsColTex, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, this.#dirShadowsDepthTex, 0);
 
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
-    // gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.#spotShadowsDepthTex, 0, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
+    gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.#spotShadowsColTex, 0, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, this.#spotShadowsDepthTex, 0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
@@ -327,7 +348,7 @@ export class Renderer {
     tmpStack.pop();
   }
 
-  draw(camera, light_mng, material_mng, player, objects) {
+  draw(camera, light_mng, material_mng, player, objects, terrain) {
     if (!this.#size) return;
     const [w, h] = this.#size.values;
     const gl = this.#ctx;
@@ -354,6 +375,7 @@ export class Renderer {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.enable(gl.DEPTH_TEST);
 
+      terrain.forEach((object) => this.#drawImplForObj(object, material_mng, camera));
       objects.forEach((object) => this.#drawImplForObj(object, material_mng, camera));
       this.#drawImplForObj(player, material_mng, camera);
 
@@ -387,38 +409,37 @@ export class Renderer {
 
       if (light_mng.isDay) {
         gl.enable(gl.DEPTH_TEST);
-        // gl.enable(gl.CULL_FACE);
-        // gl.cullFace(gl.FRONT);
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.FRONT);
         objects.forEach((object) => this.#drawForShadows(object, prog));
         this.#drawForShadows(player, prog);
-        // gl.cullFace(gl.BACK);
-        // gl.disable(gl.CULL_FACE);
+        gl.cullFace(gl.BACK);
+        gl.disable(gl.CULL_FACE);
+        terrain.forEach((object) => this.#drawForShadows(object, prog));
         gl.disable(gl.DEPTH_TEST);
       }
 
       prog.unbind();
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      
-      // gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
-      // gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.#spotShadowsDepthTex, 0, 0);
 
-      // {
-      //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#dirShadowsFB);
-      //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+      // Debug
+      if (this.showDirLightDepthTex) {
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#dirShadowsFB);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
         
-      //   // gl.viewport(0, 0, HIGH_SHADOW_SIZE, HIGH_SHADOW_SIZE);
+        gl.viewport(0, 0, HIGH_SHADOW_SIZE, HIGH_SHADOW_SIZE);
   
-      //   gl.drawBuffers([
-      //     gl.BACK,
-      //   ]);
+        gl.drawBuffers([
+          gl.BACK,
+        ]);
   
-      //   gl.blitFramebuffer(0, 0, HIGH_SHADOW_SIZE, HIGH_SHADOW_SIZE, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+        gl.blitFramebuffer(0, 0, HIGH_SHADOW_SIZE, HIGH_SHADOW_SIZE, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.NEAREST);
   
-      //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
-      //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
 
-      //   return;
-      // }
+        return;
+      }
     }
     
     // Shadows (Point Light)
@@ -429,9 +450,9 @@ export class Renderer {
 
       {
         if (!light_mng.isDay) {
-          for (let i = 0; i < light_mng.spotLightCount; ++i) {
+          for (let i = 0; i < light_mng.spotLightCount - 2; ++i) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
-            gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.#spotShadowsDepthTex, 0, i);
+            gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.#spotShadowsColTex, 0, i);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     
             gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
@@ -453,42 +474,25 @@ export class Renderer {
             spotLightMat.push(
               Mat4.Identity()
               .apply(Mat4.Perspective(toRad(150), 1.0, 0.1, 10.0))
-              .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(-1, 0, 0)))
+              .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(1, 0, 0)))
             );
             prog.uLightMat.update(spotLightMat.at(-1).values);        
   
             gl.enable(gl.DEPTH_TEST);
-            // gl.enable(gl.CULL_FACE);
-            // gl.cullFace(gl.FRONT);
+            gl.enable(gl.CULL_FACE);
+            gl.cullFace(gl.FRONT);
             objects.forEach((object) => this.#drawForShadows(object, prog));
             this.#drawForShadows(player, prog);
-            // gl.cullFace(gl.BACK);
-            // gl.disable(gl.CULL_FACE);
+            gl.cullFace(gl.BACK);
+            gl.disable(gl.CULL_FACE);
+            terrain.forEach((object) => this.#drawForShadows(object, prog));
             gl.disable(gl.DEPTH_TEST);
-            }
+          }
         }
       }
 
       prog.unbind();
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-      // {
-      //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#spotShadowsFB);
-      //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-        
-      //   gl.viewport(0, 0, SMALL_SHADOW_SIZE, SMALL_SHADOW_SIZE);
-  
-      //   gl.drawBuffers([
-      //     gl.BACK,
-      //   ]);
-  
-      //   gl.blitFramebuffer(0, 0, SMALL_SHADOW_SIZE, SMALL_SHADOW_SIZE, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.NEAREST);
-  
-      //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
-      //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-
-      //   return;
-      // }
     }
 
     // SSAO
@@ -650,10 +654,10 @@ export class Renderer {
         gl.bindTexture(gl.TEXTURE_2D, this.#ssaoBlurColTex);
 
         gl.activeTexture(gl.TEXTURE0 + 5);
-        gl.bindTexture(gl.TEXTURE_2D, this.#dirShadowsDepthTex);
+        gl.bindTexture(gl.TEXTURE_2D, this.#dirShadowsColTex);
 
         gl.activeTexture(gl.TEXTURE0 + 6);
-        gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.#spotShadowsDepthTex);
+        gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.#spotShadowsColTex);
       }
 
       gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
@@ -713,6 +717,7 @@ export class Renderer {
         // gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        terrain.forEach((object) => this.#drawDebug(object, camera));
         objects.forEach((object) => this.#drawDebug(object, camera));
         this.#drawDebug(player, camera);
         gl.disable(gl.BLEND);

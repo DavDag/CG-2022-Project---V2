@@ -50,9 +50,9 @@ export class StreetLamp {
       this.lightPos,
       this.lightCol,
       {amb: 0.00, dif: 1.0, spe: 0.5},
-      {lin: 0.1, qua: 0.05},
-      Math.cos(toRad(55)),
-      Math.cos(toRad(85)),
+      {lin: 0.4, qua: 0.2},
+      Math.cos(toRad(50)),
+      Math.cos(toRad(70)),
     ));
   }
 

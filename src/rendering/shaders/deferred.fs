@@ -153,7 +153,7 @@ vec3 CalcSpotLight(SLight light, vec3 viewDir, vec3 position, vec3 normal, vec3 
   return ambient + invShadowF * (diffuse + specular);
 }
 
-float CalcDirShadow(vec4 position, float bias) {
+float CalcDirShadow(vec4 position, vec3 normal, float bias) {
   // Find position in light space
   vec4 fPosInLightSpace = uDirLightMat * position;
 
@@ -171,6 +171,8 @@ float CalcDirShadow(vec4 position, float bias) {
 
   // Retrieve depth of fragment inside
   float closestDepth = texture(uDirShadowTex, fPosInLightSpaceProjCoords.xy).r;
+
+  // float b = max(0.05 * (1.0 - dot(normal, -uDirectionalLight.dir)), 0.005);  ;
 
   // Compute shadow (simple vers)
   float tmp = (currentDepth - bias > closestDepth)  ? 1.0 : 0.0;
@@ -233,8 +235,8 @@ float CalcSpotShadow(int index, vec4 position, float bias) {
   // tmp /= 9.0;
 
   // Attenuate based on distance from light position
-  float distance = min(length(fPosInLightSpace.xy), 1.0);
-  tmp *= 1.0 - distance;
+  float dist = min(length(fPosInLightSpace.xy), 1.0);
+  tmp *= 1.0 - dist * dist;
 
   // Return result
   return tmp;
@@ -266,7 +268,7 @@ void main() {
   ////////////////////////////////////
   float dirShadow = 0.0;
   if (uUseDirLightForShadow == 1) {
-    dirShadow = CalcDirShadow(texPos, 0.005);
+    dirShadow = CalcDirShadow(texPos, fNor, 0.0005);
   }
 
   ////////////////////////////////////

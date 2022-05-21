@@ -44,9 +44,7 @@ function addCars(arr, off, rot, data) {
   });
 }
 
-function CreateTile() {
-  const objects = [];
-
+function CreateTile(objects, terrain) {
   // City
   addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 9), 0, true, [[4, 4], [5, 3], [2, 4], [3, 5], [5, 3],]);
   addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-1, 0, 13), 270, true, [[2, 3]]);
@@ -54,8 +52,8 @@ function CreateTile() {
   addBuildings(B_TYPE_COMMERCIAL, objects, new Vec3(-5, 0, 14), 0, true, [[5, 6], [0, 4], [1, 5]]);
 
   // Green areas
-  objects.push(new Grass(new Vec2(20, 20), new Vec2(19, 29), true));
-  objects.push(new Grass(new Vec2(-1, 0), new Vec2(19, 20), true));
+  terrain.push(new Grass(new Vec2(20, 20), new Vec2(19, 29), true));
+  terrain.push(new Grass(new Vec2(-1, 0), new Vec2(19, 20), true));
 
   const arr = [
     [12, -5], [ 5, 14], [16, 17], [ 7, 16], [16, 18], [18,  8], [ 2, 17], [ 3, 15], [16,  0],
@@ -80,8 +78,8 @@ function CreateTile() {
   for (let x = 1; x < 20; ++x)
     objects.push(new Fence(new Vec3(-x - 0.5, 0, -0.5), 270));
   
-  objects.push(new Street());
-  objects.push(new Terrain());
+  terrain.push(new Street());
+  terrain.push(new Terrain());
 
   // Parking
   addCars(objects, new Vec3(-2, 0, 1),   0, [0, 1, 2, 3, 4, 5, 6, 7, 2, 4, 7, 5, 7, 2, 1, 1, 0, 3, 6, 5, 3, 2, 1, 5]);
@@ -104,8 +102,6 @@ function CreateTile() {
   }
   for (let x = 4; x < 20; x += 4)
     objects.push(new StreetLamp(new Vec3(x, 0, -8.5), 0));
-
-  return objects;
 }
 
 export class App {
@@ -122,9 +118,8 @@ export class App {
 
   #renderer = null;
   #player = new Player();
-  #objects = [
-    ... CreateTile(),
-  ];
+  #terrain = [];
+  #objects = [];
 
   onResize(canvasSize, contextSize) {
     const gl = this.#ctx;
@@ -211,6 +206,10 @@ export class App {
         this.#cameraMng.forceFollowPlayer = (this.#cameraMng.forceFollowPlayer + 1) % 3;
         break;
       }
+      case "k": {
+        this.#renderer.showDirLightDepthTex = !this.#renderer.showDirLightDepthTex;
+        break;
+      }
     }
     this.#player.onKeyDown(event);
 
@@ -228,6 +227,8 @@ export class App {
   }
 
   #setup() {
+    CreateTile(this.#objects, this.#terrain);
+
     const gl = this.#ctx;
     this.#uiMng = new UIManager(gl);
     this.#lightMng = new LightManager(gl);
@@ -236,6 +237,7 @@ export class App {
     this.#renderer = new Renderer(gl);
 
     this.#player.setup(gl, this.#lightMng);
+    this.#terrain.forEach((obj) => obj.setup(gl, this.#lightMng));
     this.#objects.forEach((obj) => obj.setup(gl, this.#lightMng));
 
     this.#lightMng.addDL(true, new DLight(
@@ -293,6 +295,7 @@ export class App {
       this.#materialMng,
       this.#player,
       this.#objects,
+      this.#terrain,
     );
   }
 

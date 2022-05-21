@@ -69,6 +69,7 @@ export class UIManager {
       pointLights: document.getElementById("pointLights"),
       spotLights: document.getElementById("spotLights"),
       showLightsPos: document.getElementById("showLightsPos"),
+      dirLightDepthTex: document.getElementById("dirLightDepthTex"),
       isDay: document.getElementById("isDay"),
       ssaoResults: document.getElementById("ssaoResults"),
 
@@ -131,8 +132,9 @@ export class UIManager {
   
       // Rendering
       this.#docRef.partResults.innerHTML = (renderer.showPartialResults) ? ON : OFF;
-      this.#docRef.aaSampleMethod.innerHTML = CUSTOM((renderer.aaSamples == 0) ? "None" : "Native x" + renderer.aaSamples);
+      // this.#docRef.aaSampleMethod.innerHTML = CUSTOM((renderer.aaSamples == 0) ? "None" : "Native x" + renderer.aaSamples);
       this.#docRef.ssaoResults.innerHTML = (renderer.showOccResults) ? ON : OFF;
+      this.#docRef.dirLightDepthTex.innerHTML = (renderer.showDirLightDepthTex) ? ON : OFF;
     }
   }
 

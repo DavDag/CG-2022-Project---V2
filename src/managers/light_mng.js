@@ -89,7 +89,7 @@ export class LightManager {
   };
 
   show = false;
-  isDay = false;
+  isDay = true;
   dirLightsOff = false;
   pointLightsOff = false;
   spotLightsOff = false;
@@ -102,7 +102,7 @@ export class LightManager {
 
   get src() { return ((this.isDay) ? this.#day : this.#night); }
 
-  get spotLightCount() { return this.src.SL.length - 2; }
+  get spotLightCount() { return this.src.SL.length; }
   spotLightPos(index) { return (this.src.SL[index] ?? DEFAULT_SL).pos; }
   spotLightDir(index) { return (this.src.SL[index] ?? DEFAULT_SL).dir; }
 
