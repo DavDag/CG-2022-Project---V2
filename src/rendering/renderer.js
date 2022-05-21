@@ -444,13 +444,15 @@ export class Renderer {
         ]);
 
         if (!light_mng.isDay) {
-          const lightDir = light_mng.spotLightDir(0).clone();
-          const lightPos = light_mng.spotLightPos(0).clone();
+          const lightPos = light_mng.spotLightPos(4).clone();
+          const lightDir = light_mng.spotLightDir(4).clone();
+
+          // console.log(lightPos.toString(2), lightDir.toString(2));
         
           spotLightMat.push(
             Mat4.Identity()
-            .apply(Mat4.Perspective(toRad(45), 1.0, 0.1, 75.0))
-            .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(0, 1, 0)))
+            .apply(Mat4.Perspective(toRad(150), 1.0, 0.1, 10.0))
+            .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(-1, 0, 0)))
           );
           prog.uLightMat.update(spotLightMat.at(-1).values);        
 
@@ -715,7 +717,7 @@ export class Renderer {
         // gl.disable(gl.DEPTH_TEST);
   
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        }
+      }
 
       // Lights
       this.#stack.push(camera.viewproj);

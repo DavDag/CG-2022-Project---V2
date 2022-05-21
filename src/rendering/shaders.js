@@ -394,6 +394,11 @@ export const SHADERS = {
     out float oCol;
     void main() {
       float depth = (fPos.z / fPos.w) * 0.5 + 0.5;
+
+      float far = 10.0;
+      float near = 0.1;
+      depth = (2.0 * near * far) / (far + near - depth * (far - near));
+
       oCol = depth;
     }
     `,
@@ -543,19 +548,23 @@ export const SHADERS = {
           }
         }
 
-        if (uUseSpotLightForShadow == 1) {
+        for (int i = 0; i < uUseSpotLightForShadow; ++i) {
           ////////////////////////////////////
           // Shadows: Spot Light
           ////////////////////////////////////
 
-          vec4 fPosInLightSpace = uSpotLightMat[0] * texPos;
+          vec4 fPosInLightSpace = uSpotLightMat[i] * texPos;
           vec3 fPosInLightSpaceProjCoords = fPosInLightSpace.xyz / fPosInLightSpace.w;
           fPosInLightSpaceProjCoords = fPosInLightSpaceProjCoords * 0.5 + 0.5;
     
-          float closestDepth = texture(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy, 0)).r;
+          float closestDepth = texture(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy, i)).r;
           float currentDepth = fPosInLightSpaceProjCoords.z;
+
+          float far = 10.0;
+          float near = 0.1;
+          currentDepth = (2.0 * near * far) / (far + near - currentDepth * (far - near));
     
-          float bias = 0.00005;
+          float bias = 0.05;
 
           spotShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
 
@@ -563,12 +572,13 @@ export const SHADERS = {
             spotShadow = 0.0;
           }
 
-          // float z = currentDepth * 2.0 - 1.0;
-          // float far = 75.0;
-          // float near = 0.1;
-          // spotShadow = (2.0 * near * far) / (far + near - z * (far - near));
+          if (fPosInLightSpaceProjCoords.x > 1.0 || fPosInLightSpaceProjCoords.x < 0.0
+            || fPosInLightSpaceProjCoords.y > 1.0 || fPosInLightSpaceProjCoords.y < 0.0) {
+            spotShadow = 0.0;
+          }
 
-          spotShadow = 0.0;
+          float distance = min(length(fPosInLightSpace.xy), 1.0);
+          spotShadow *= 1.0 - distance;
         }
 
         invShadowF = 1.0 - min(dirShadow + spotShadow, 1.0);
