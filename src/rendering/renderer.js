@@ -45,8 +45,7 @@ export class Renderer {
     debugdraw: null,
     ssao: null,
     ssaoblur: null,
-    shadowmap_dl: null,
-    shadowmap_pl: null,
+    shadowmap: null,
     deferred: null,
     textured: null,
   };
@@ -58,8 +57,7 @@ export class Renderer {
     this.#programs.debugdraw = CreateProgramFromData(gl, SHADERS.DEBUG_DRAW);
     this.#programs.ssao = CreateProgramFromData(gl, SHADERS.SSAO);
     this.#programs.ssaoblur = CreateProgramFromData(gl, SHADERS.SSAO_BLUR);
-    this.#programs.shadowmap_dl = CreateProgramFromData(gl, SHADERS.SHADOW_MAP_DL);
-    this.#programs.shadowmap_pl = CreateProgramFromData(gl, SHADERS.SHADOW_MAP_DL);
+    this.#programs.shadowmap = CreateProgramFromData(gl, SHADERS.SHADOW_MAP_DL);
     this.#programs.deferred = CreateProgramFromData(gl, SHADERS.DEFERRED);
     this.#programs.textured = CreateProgramFromData(gl, SHADERS.TEXTURED);
 
@@ -366,8 +364,9 @@ export class Renderer {
 
     // Shadows (Dir Light)
     {
-      const prog = this.#programs.shadowmap_dl;
+      const prog = this.#programs.shadowmap;
       prog.use();
+      prog.isDepthLinear.update(1);
 
       dirLightMat = Mat4.Identity()
         .apply(Mat4.Orthogonal(-30, 30, -20, 20, 1.0, 75.0))
@@ -424,8 +423,9 @@ export class Renderer {
     
     // Shadows (Point Light)
     {
-      const prog = this.#programs.shadowmap_pl;
+      const prog = this.#programs.shadowmap;
       prog.use();
+      prog.isDepthLinear.update(0);
 
       {
         if (!light_mng.isDay) {

@@ -15,7 +15,7 @@ export const SSAO_SAMPLE_COUNT = 32;
 export const NUM_PL = 4;
 export const NUM_SL = 32;
 export const NUM_SHADOW_CASTER = 32;
-export const HIGH_SHADOW_SIZE = 8192;
+export const HIGH_SHADOW_SIZE = 4096;
 export const SMALL_SHADOW_SIZE = 512;
 
 export const SHADERS = {
@@ -390,15 +390,16 @@ export const SHADERS = {
 
     fragment_shader_src: `#version 300 es
     precision highp float;
+    uniform int isDepthLinear;
     in vec4 fPos;
     out float oCol;
     void main() {
       float depth = (fPos.z / fPos.w) * 0.5 + 0.5;
-
-      float far = 10.0;
-      float near = 0.1;
-      depth = (2.0 * near * far) / (far + near - depth * (far - near));
-
+      if (isDepthLinear == 0) {
+        float far = 10.0;
+        float near = 0.1;
+        depth = (2.0 * near * far) / (far + near - depth * (far - near));
+      }
       oCol = depth;
     }
     `,
@@ -410,6 +411,7 @@ export const SHADERS = {
     uniforms: [
       ["uLightMat", "Matrix4fv"],
       ["uModel", "Matrix4fv"],
+      ["isDepthLinear", "1i"],
     ],
   }),
 
@@ -558,16 +560,26 @@ export const SHADERS = {
           vec3 fPosInLightSpaceProjCoords = fPosInLightSpace.xyz / fPosInLightSpace.w;
           fPosInLightSpaceProjCoords = fPosInLightSpaceProjCoords * 0.5 + 0.5;
     
-          float closestDepth = texture(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy, i)).r;
+          float closestDepth = textureLod(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy, i), 0.0).r;
           float currentDepth = fPosInLightSpaceProjCoords.z;
 
           float far = 10.0;
           float near = 0.1;
           currentDepth = (2.0 * near * far) / (far + near - currentDepth * (far - near));
     
-          float bias = 0.05;
+          // float bias = 0.005;
+          float bias = max(0.05 * (1.0 - dot(fNor, vec3(0, -1, 0))), 0.005);
 
-          currSpotShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+          // currSpotShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+
+          vec2 texelSize = 1.0 / vec3(textureSize(uSpotShadowTexArr, 0)).xy;
+          for (int x = -1; x <= 1; ++x) {
+            for (int y = -1; y <= 1; ++y) {
+              float pcfDepth = textureLod(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy + vec2(x, y) * texelSize, i), 0.0).r;
+              currSpotShadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+            }
+          }
+          currSpotShadow /= 9.0;
 
           if (fPosInLightSpaceProjCoords.z > 1.0) {
             currSpotShadow = 0.0;
