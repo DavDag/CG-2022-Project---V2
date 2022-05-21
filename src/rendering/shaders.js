@@ -15,7 +15,8 @@ export const SSAO_SAMPLE_COUNT = 32;
 export const NUM_PL = 24;
 export const NUM_SL = 4;
 export const NUM_SHADOW_CASTER = 4;
-export const SHADOW_SIZE = 8192;
+export const HIGH_SHADOW_SIZE = 8192;
+export const SMALL_SHADOW_SIZE = 512;
 
 export const SHADERS = {
 
@@ -407,39 +408,6 @@ export const SHADERS = {
     ],
   }),
 
-  SHADOW_MAP_PL: (gl) => ({
-    vertex_shader_src: `#version 300 es
-    layout (location = 0) in vec3 vPos;
-    uniform mat4 uLightMat;
-    uniform mat4 uModel;
-    out vec4 fPos;
-    void main() {
-      gl_Position = uLightMat * uModel * vec4(vPos, 1.0);
-      fPos = gl_Position;
-    }
-    `,
-
-    fragment_shader_src: `#version 300 es
-    precision highp float;
-    in vec4 fPos;
-    out float oCol;
-    void main() {
-      float depth = (fPos.z / fPos.w) * 0.5 + 0.5;
-      oCol = depth;
-      gl_FragDepth = depth;
-    }
-    `,
-
-    attributes: [
-      ["vPos", 3, gl.FLOAT, 32,  0],
-    ],
-
-    uniforms: [
-      ["uLightMat", "Matrix4fv"],
-      ["uModel", "Matrix4fv"],
-    ],
-  }),
-
   DEFERRED: (gl) => ({
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
@@ -457,6 +425,8 @@ export const SHADERS = {
 
     fragment_shader_src: `#version 300 es
     precision highp float;
+    precision highp int;
+    precision highp sampler2DArray;
 
     struct Material {
       float shininess;
@@ -501,18 +471,19 @@ export const SHADERS = {
         float outerCutOff;
     };
 
-    vec3 CalcDLight(DLight light, vec3 color, vec3 normal, vec3 viewDir, float occ, float invShadowF, Material material);
-    vec3 CalcPLight(PLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, float occ, float invShadowF, Material material);
-    vec3 CalcSLight(SLight light, vec3 color, vec3 normal, vec3 fPos, vec3 viewDir, float occ, float invShadowF, Material material);
-
     uniform sampler2D uPosTex;
     uniform sampler2D uColTex;
     uniform sampler2D uNorTex;
     uniform sampler2D uDepthTex;
     uniform sampler2D uSSAOTex;
 
-    uniform mat4 uLightMat;
-    uniform sampler2D uShadowTex;
+    uniform int uUseDirLightForShadow;
+    uniform mat4 uDirLightMat;
+    uniform sampler2D uDirShadowTex;
+
+    uniform int uUseSpotLightForShadow;
+    uniform mat4 uSpotLightMat[${NUM_SHADOW_CASTER}];
+    uniform sampler2DArray uSpotShadowTexArr;
 
     uniform vec3 uViewPos;
     uniform DLight uDirectionalLight;
@@ -538,39 +509,67 @@ export const SHADERS = {
 
       if (fDepth == 1.0) discard;
 
-      float shadow = 0.0;
+      float dirShadow = 0.0;
+      float spotShadow = 0.0;
       float invShadowF = 1.0;
       {
-        ////////////////////////////////////
-        // Shadows
-        ////////////////////////////////////
+        if (uUseDirLightForShadow == 1) {
+          ////////////////////////////////////
+          // Shadows: Dir Light
+          ////////////////////////////////////
 
-        vec4 fPosInLightSpace = uLightMat * texPos;
-        vec3 fPosInLightSpaceProjCoords = fPosInLightSpace.xyz / fPosInLightSpace.w;
-        fPosInLightSpaceProjCoords = fPosInLightSpaceProjCoords * 0.5 + 0.5;
-  
-        float closestDepth = texture(uShadowTex, fPosInLightSpaceProjCoords.xy).r;
-        float currentDepth = fPosInLightSpaceProjCoords.z;
+          vec4 fPosInLightSpace = uDirLightMat * texPos;
+          vec3 fPosInLightSpaceProjCoords = fPosInLightSpace.xyz / fPosInLightSpace.w;
+          fPosInLightSpaceProjCoords = fPosInLightSpaceProjCoords * 0.5 + 0.5;
+    
+          float closestDepth = texture(uDirShadowTex, fPosInLightSpaceProjCoords.xy).r;
+          float currentDepth = fPosInLightSpaceProjCoords.z;
+    
+          float bias = 0.0003;
 
-        if (fPosInLightSpaceProjCoords.z > 1.0) {
-          shadow = 0.0;
-          // continue;
-        }
-  
-        float bias = 0.0003;
+          // dirShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
 
-        // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+          vec2 texelSize = 1.0 / vec2(textureSize(uDirShadowTex, 0));
+          for (int x = -1; x <= 1; ++x) {
+            for (int y = -1; y <= 1; ++y) {
+              float pcfDepth = texture(uDirShadowTex, fPosInLightSpaceProjCoords.xy + vec2(x, y) * texelSize).r;
+              dirShadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+            }
+          }
+          dirShadow /= 9.0;
 
-        vec2 texelSize = 1.0 / vec2(textureSize(uShadowTex, 0));
-        for (int x = -1; x <= 1; ++x) {
-          for (int y = -1; y <= 1; ++y) {
-            float pcfDepth = texture(uShadowTex, fPosInLightSpaceProjCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+          if (fPosInLightSpaceProjCoords.z > 1.0) {
+            dirShadow = 0.0;
           }
         }
-        shadow /= 9.0;
 
-        invShadowF = 1.0 - shadow;
+        if (uUseSpotLightForShadow == 1) {
+          ////////////////////////////////////
+          // Shadows: Spot Light
+          ////////////////////////////////////
+
+          vec4 fPosInLightSpace = uSpotLightMat[0] * texPos;
+          vec3 fPosInLightSpaceProjCoords = fPosInLightSpace.xyz / fPosInLightSpace.w;
+          fPosInLightSpaceProjCoords = fPosInLightSpaceProjCoords * 0.5 + 0.5;
+    
+          float closestDepth = texture(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy, 0)).r;
+          float currentDepth = fPosInLightSpaceProjCoords.z;
+    
+          float bias = 0.0005;
+
+          spotShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+
+          if (fPosInLightSpaceProjCoords.z > 1.0) {
+            spotShadow = 0.0;
+          }
+
+          // float z = currentDepth * 2.0 - 1.0;
+          // float far = 75.0;
+          // float near = 0.1;
+          // spotShadow = (2.0 * near * far) / (far + near - z * (far - near));
+        }
+
+        invShadowF = 1.0 - min(dirShadow + spotShadow, 1.0);
       }
 
       Material material;
@@ -662,7 +661,8 @@ export const SHADERS = {
       }
 
       oColor = vec4(result, 1.0);
-      // oColor = vec4(vec3(invShadowF), 1.0);
+      oColor = vec4(vec3(invShadowF), 1.0);
+      // oColor = vec4(vec3(spotShadow), 1.0);
     }
     `,
 
@@ -712,8 +712,15 @@ export const SHADERS = {
         ["uSpotLights[" + ind + "].outerCutOff", "1f"],
       ])).flat()),
 
-      ["uLightMat", "Matrix4fv"],
-      ["uShadowTex", "1i"],
+      ["uUseDirLightForShadow", "1i"],
+      ["uDirLightMat", "Matrix4fv"],
+      ["uDirShadowTex", "1i"],
+      
+      ["uUseSpotLightForShadow", "1i"],
+      ...(new Array(NUM_SHADOW_CASTER).fill(null).map((_, ind) => ([
+        ["uSpotLightMat[" + ind + "]", "Matrix4fv"],
+      ])).flat()),
+      ["uSpotShadowTexArr", "1i"],
     ],
   }),
 
