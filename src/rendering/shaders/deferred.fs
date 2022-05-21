@@ -154,6 +154,8 @@ vec3 CalcSpotLight(SLight light, vec3 viewDir, vec3 position, vec3 normal, vec3 
 }
 
 float CalcDirShadow(vec4 pos, vec3 normal, float bias) {
+  // Normal offset
+  // https://digitalrune.github.io/DigitalRune-Documentation/html/3f4d959e-9c98-4a97-8d85-7a73c26145d7.htm
   vec4 position = vec4(pos.xyz + normal * 32.0 * (1.0 / 8192.0), pos.w);
 
   // Find position in light space
@@ -193,7 +195,9 @@ float CalcDirShadow(vec4 pos, vec3 normal, float bias) {
 }
 
 float CalcSpotShadow(int index, vec4 pos, vec3 normal, float bias) {
-  vec4 position = vec4(pos.xyz + normal * 32.0 * (1.0 / 1024.0), pos.w);
+  // Normal offset
+  // https://digitalrune.github.io/DigitalRune-Documentation/html/3f4d959e-9c98-4a97-8d85-7a73c26145d7.htm
+  vec4 position = vec4(pos.xyz + normal * 128.0 * (1.0 / 1024.0), pos.w);
 
   // Find position in light space
   vec4 fPosInLightSpace = uSpotLightMat[index] * position;
@@ -312,7 +316,8 @@ void main() {
     ////////////////////////////////////
     // Spot Light
     ////////////////////////////////////
-    result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, invShadowF, material);
+    float shadowF = CalcSpotShadow(s, texPos, fNor, 0.000);
+    result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, 1.0 - shadowF, material);
   }
 
   oColor = vec4(result, 1.0);

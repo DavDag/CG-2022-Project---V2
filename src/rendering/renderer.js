@@ -435,7 +435,7 @@ export class Renderer {
       }
     }
     
-    // Shadows (Point Light)
+    // Shadows (Spot Light)
     {
       const prog = this.#programs.shadowmap;
       prog.use();
@@ -443,7 +443,7 @@ export class Renderer {
 
       {
         if (!light_mng.isDay) {
-          for (let i = 0; i < light_mng.spotLightCount - 2; ++i) {
+          for (let i = 0; i < light_mng.spotLightCount; ++i) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
             gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.#spotShadowsColTex, 0, i);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -459,16 +459,22 @@ export class Renderer {
               gl.COLOR_ATTACHMENT0,
             ]);
     
-            const lightPos = light_mng.spotLightPos(i + 2).clone();
-            const lightDir = light_mng.spotLightDir(i + 2).clone();
-  
-            // console.log(lightPos.toString(2), lightDir.toString(2));
+            const lightPos = light_mng.spotLightPos(i).clone();
+            const lightDir = light_mng.spotLightDir(i).clone();
           
-            spotLightMat.push(
-              Mat4.Identity()
-              .apply(Mat4.Perspective(toRad(150), 1.0, 0.1, 10.0))
-              .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(1, 0, 0)))
-            );
+            if (i < 2) {
+              spotLightMat.push(
+                Mat4.Identity()
+                .apply(Mat4.Perspective(toRad(50), 1.0, 0.1, 3.0))
+                .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(0, 1, 0)))
+              );
+            } else {
+              spotLightMat.push(
+                Mat4.Identity()
+                .apply(Mat4.Perspective(toRad(150), 1.0, 0.1, 10.0))
+                .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(1, 0, 0)))
+              );
+            }
             prog.uLightMat.update(spotLightMat.at(-1).values);        
   
             gl.enable(gl.DEPTH_TEST);
@@ -480,6 +486,15 @@ export class Renderer {
             gl.disable(gl.CULL_FACE);
             terrain.forEach((object) => this.#drawForShadows(object, prog));
             gl.disable(gl.DEPTH_TEST);
+
+            // {
+            //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#spotShadowsFB);
+            //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+            //   gl.viewport(0, 0, w, h);
+            //   gl.drawBuffers([gl.BACK]);
+            //   gl.blitFramebuffer(0, 0, SMALL_SHADOW_SIZE, SMALL_SHADOW_SIZE, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.LINEAR);
+            //   return;
+            // }
           }
         }
       }

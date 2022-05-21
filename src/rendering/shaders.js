@@ -397,7 +397,7 @@ export const SHADERS = {
     out float oCol;
     const float texel = 1.0 / ${SMALL_SHADOW_SIZE}.0;
     void main() {
-      float depthBias = 0.00 * texel;
+      float depthBias = 0.01 * texel;
       float depth = (fPos.z / fPos.w) + depthBias;
       depth = depth * 0.5 + 0.5;
       if (isDepthLinear == 0) {
