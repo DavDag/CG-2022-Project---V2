@@ -14,9 +14,6 @@ export class Renderer {
   #offscreenPosTex = null;
   #offscreenNorTex = null;
   #offscreenDepthTex = null;
-  #offscreenFB2 = null;
-  #offscreenColTex2 = null;
-  #offscreenDepthTex2 = null;
 
   #ssaoKernels = [];
   #ssaoNoise = [];
@@ -69,10 +66,6 @@ export class Renderer {
     this.#offscreenColTex =  gl.createTexture();
     this.#offscreenNorTex =  gl.createTexture();
     this.#offscreenDepthTex =  gl.createTexture();
-
-    this.#offscreenFB2 = gl.createFramebuffer();
-    this.#offscreenColTex2 =  gl.createRenderbuffer();
-    this.#offscreenDepthTex2 =  gl.createRenderbuffer();
 
     this.#ssaoFB = gl.createFramebuffer();
     this.#ssaoColTex = gl.createTexture();
@@ -181,22 +174,9 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
 
-
-    this.updateSamples(this.aaSamples);
+    // this.updateSamples(this.aaSamples);
 
     this.#bindAllToFB();
-  }
-
-  updateSamples() {
-    const gl = this.#ctx;
-    
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenDepthTex2);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, this.#size.w, this.#size.h);
-    // gl.renderbufferStorageMultisample(gl.RENDERBUFFER, this.aaSamples, gl.DEPTH24_STENCIL8, this.#size.w, this.#size.h);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, this.#offscreenColTex2);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGB8, this.#size.w, this.#size.h);
-    // gl.renderbufferStorageMultisample(gl.RENDERBUFFER, this.aaSamples, gl.RGB8, this.#size.w, this.#size.h);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
   }
 
   #bindAllToFB() {
@@ -208,10 +188,6 @@ export class Renderer {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, this.#offscreenNorTex, 0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, this.#offscreenDepthTex, 0);
     gl.bindTexture(gl.TEXTURE_2D, null);
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB2);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, this.#offscreenColTex2);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, this.#offscreenDepthTex2);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.#ssaoFB);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#ssaoColTex, 0);
@@ -348,11 +324,25 @@ export class Renderer {
     tmpStack.pop();
   }
 
+  #drawQuad(prog) {
+    const gl = this.#ctx;
+    const quad = this.#quad;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, quad.vertbuff);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.indibuff);
+    prog.enableAttributes();
+
+    gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
+
+    prog.disableAttributes();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  }
+
   draw(camera, light_mng, material_mng, player, objects, terrain) {
     if (!this.#size) return;
     const [w, h] = this.#size.values;
     const gl = this.#ctx;
-    const quad = this.#quad;
     const quadMatRev = Mat4.Identity().scale(new Vec3(2, -2, 1));
 
     var dirLightMat = null;
@@ -375,9 +365,12 @@ export class Renderer {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.enable(gl.DEPTH_TEST);
 
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(gl.BACK);
       terrain.forEach((object) => this.#drawImplForObj(object, material_mng, camera));
       objects.forEach((object) => this.#drawImplForObj(object, material_mng, camera));
       this.#drawImplForObj(player, material_mng, camera);
+      gl.disable(gl.CULL_FACE);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -521,10 +514,6 @@ export class Renderer {
         gl.COLOR_ATTACHMENT0,
       ]);
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, quad.vertbuff);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.indibuff);
-      prog.enableAttributes();
-
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.#offscreenPosTex);
       gl.activeTexture(gl.TEXTURE0 + 1);
@@ -534,11 +523,7 @@ export class Renderer {
       gl.activeTexture(gl.TEXTURE0 + 3);
       gl.bindTexture(gl.TEXTURE_2D, this.#ssaoNoiseTex);
 
-      gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
-
-      prog.disableAttributes();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      this.#drawQuad(prog);
 
       prog.unbind();
     }
@@ -561,18 +546,10 @@ export class Renderer {
         gl.COLOR_ATTACHMENT0,
       ]);
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, quad.vertbuff);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.indibuff);
-      prog.enableAttributes();
-
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.#ssaoColTex);
 
-      gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
-
-      prog.disableAttributes();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      this.#drawQuad(prog);
 
       prog.unbind();
 
@@ -624,7 +601,7 @@ export class Renderer {
         });
       }
 
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#offscreenFB2);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, w, h);
 
       gl.clearColor(0, 0, 0, 1);
@@ -633,12 +610,8 @@ export class Renderer {
       gl.enable(gl.DEPTH_TEST);
 
       gl.drawBuffers([
-        gl.COLOR_ATTACHMENT0,
+        gl.BACK,
       ]);
-
-      gl.bindBuffer(gl.ARRAY_BUFFER, quad.vertbuff);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quad.indibuff);
-      prog.enableAttributes();
 
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
@@ -660,51 +633,30 @@ export class Renderer {
         gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.#spotShadowsColTex);
       }
 
-      gl.drawElements(gl.TRIANGLES, quad.numindi, gl.UNSIGNED_SHORT, 0);
-
-      prog.disableAttributes();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      this.#drawQuad(prog);
 
       prog.unbind();
     }
 
-    // // Copy depth buffer
-    // {
-    //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB);
-    //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-      
-    //   gl.viewport(0, 0, w, h);
-
-    //   gl.drawBuffers([
-    //     gl.NONE,
-    //   ]);
-
-    //   gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.DEPTH_BUFFER_BIT, gl.NEAREST);
-
-    //   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
-    //   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-    // }
-
-    // Draw to screen
-    {
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB2);
-      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-      
-      gl.viewport(0, 0, w, h);
-
-      gl.drawBuffers([
-        gl.BACK,
-      ]);
-
-      gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.LINEAR);
-
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
-      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-    }
-
     // Debug
     if (!this.showPartialResults) {
+      // Copy depth buffer
+      {
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+        
+        gl.viewport(0, 0, w, h);
+  
+        gl.drawBuffers([
+          gl.NONE,
+        ]);
+  
+        gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.DEPTH_BUFFER_BIT, gl.NEAREST);
+  
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+      }
+
       // Meshes
       if (Debug.isActive) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);

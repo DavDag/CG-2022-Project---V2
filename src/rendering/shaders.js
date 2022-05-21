@@ -395,8 +395,11 @@ export const SHADERS = {
     uniform int isDepthLinear;
     in vec4 fPos;
     out float oCol;
+    const float texel = 1.0 / ${SMALL_SHADOW_SIZE}.0;
     void main() {
-      float depth = (fPos.z / fPos.w) * 0.5 + 0.5;
+      float depthBias = 0.00 * texel;
+      float depth = (fPos.z / fPos.w) + depthBias;
+      depth = depth * 0.5 + 0.5;
       if (isDepthLinear == 0) {
         float far = 10.0;
         float near = 0.1;

@@ -153,7 +153,9 @@ vec3 CalcSpotLight(SLight light, vec3 viewDir, vec3 position, vec3 normal, vec3 
   return ambient + invShadowF * (diffuse + specular);
 }
 
-float CalcDirShadow(vec4 position, vec3 normal, float bias) {
+float CalcDirShadow(vec4 pos, vec3 normal, float bias) {
+  vec4 position = vec4(pos.xyz + normal * 32.0 * (1.0 / 8192.0), pos.w);
+
   // Find position in light space
   vec4 fPosInLightSpace = uDirLightMat * position;
 
@@ -172,18 +174,16 @@ float CalcDirShadow(vec4 position, vec3 normal, float bias) {
   // Retrieve depth of fragment inside
   float closestDepth = texture(uDirShadowTex, fPosInLightSpaceProjCoords.xy).r;
 
-  // float b = max(0.05 * (1.0 - dot(normal, -uDirectionalLight.dir)), 0.005);  ;
-
   // Compute shadow (simple vers)
-  float tmp = (currentDepth - bias > closestDepth)  ? 1.0 : 0.0;
+  float tmp = (currentDepth - bias >= closestDepth)  ? 1.0 : 0.0;
 
-  // PCF (improving the edges)
+  // // PCF (improving the edges)
   // float tmp = 0.0;
   // vec2 texelSize = 1.0 / vec2(textureSize(uDirShadowTex, 0));
   // for (int x = -1; x <= 1; ++x) {
   //   for (int y = -1; y <= 1; ++y) {
   //     float pcfDepth = texture(uDirShadowTex, fPosInLightSpaceProjCoords.xy + vec2(x, y) * texelSize).r;
-  //     tmp += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+  //     tmp += (currentDepth - bias >= pcfDepth) ? 1.0 : 0.0;
   //   }
   // }
   // tmp /= 9.0;
@@ -192,7 +192,9 @@ float CalcDirShadow(vec4 position, vec3 normal, float bias) {
   return tmp;
 }
 
-float CalcSpotShadow(int index, vec4 position, float bias) {
+float CalcSpotShadow(int index, vec4 pos, vec3 normal, float bias) {
+  vec4 position = vec4(pos.xyz + normal * 32.0 * (1.0 / 1024.0), pos.w);
+
   // Find position in light space
   vec4 fPosInLightSpace = uSpotLightMat[index] * position;
 
@@ -221,15 +223,17 @@ float CalcSpotShadow(int index, vec4 position, float bias) {
 
   // Retrieve depth of fragment inside
   float closestDepth = textureLod(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy, index), 0.0).r;
-  
-  // Compute shadow (simple vers)
-  float tmp = (currentDepth - bias > closestDepth)  ? 1.0 : 0.0;
 
+  // Compute shadow (simple vers)
+  float tmp = (currentDepth - bias >= closestDepth)  ? 1.0 : 0.0;
+
+  // PCF (improving the edges)
+  // float tmp = 0.0;
   // vec2 texelSize = 1.0 / vec3(textureSize(uSpotShadowTexArr, 0)).xy;
   // for (int x = -1; x <= 1; ++x) {
   //   for (int y = -1; y <= 1; ++y) {
   //     float pcfDepth = textureLod(uSpotShadowTexArr, vec3(fPosInLightSpaceProjCoords.xy + vec2(x, y) * texelSize, index), 0.0).r;
-  //     tmp += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+  //     tmp += (currentDepth - bias >= pcfDepth) ? 1.0 : 0.0;
   //   }
   // }
   // tmp /= 9.0;
@@ -268,7 +272,7 @@ void main() {
   ////////////////////////////////////
   float dirShadow = 0.0;
   if (uUseDirLightForShadow == 1) {
-    dirShadow = CalcDirShadow(texPos, fNor, 0.0005);
+    dirShadow = CalcDirShadow(texPos, fNor, 0.0000);
   }
 
   ////////////////////////////////////
@@ -276,7 +280,7 @@ void main() {
   ////////////////////////////////////
   float spotShadow = 0.0;
   for (int i = 0; i < uUseSpotLightForShadow; ++i) {
-    spotShadow += CalcSpotShadow(i, texPos, 0.005);
+    spotShadow += CalcSpotShadow(i, texPos, fNor, 0.000);
   }
   
   // Calculate shadow factor
