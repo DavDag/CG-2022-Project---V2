@@ -35,6 +35,9 @@ export class Renderer {
   #bloomColTex = null;
   #bloomColTex2 = null;
 
+  #rainFB = null;
+  #rainColTex = null;
+
   aaSamples = 0;
   aaMaxSamples = 0;
   showPartialResults = false;
@@ -42,10 +45,13 @@ export class Renderer {
   showDirLightDepthTex = false;
   showBloomResults = false;
 
+  showRain = true;
+
   #quad = null;
 
   #programs = {
     default: null,
+    textured: null,
     debugview: null,
     debugdraw: null,
     ssao: null,
@@ -53,12 +59,13 @@ export class Renderer {
     shadowmap: null,
     bloom: null,
     deferred: null,
-    textured: null,
+    rain: null,
   };
 
   constructor(gl) {
     this.#ctx = gl;
     this.#programs.default = CreateProgramFromData(gl, SHADERS.DEFAULT);
+    this.#programs.textured = CreateProgramFromData(gl, SHADERS.TEXTURED);
     this.#programs.debugview = CreateProgramFromData(gl, SHADERS.DEBUG_VIEW);
     this.#programs.debugdraw = CreateProgramFromData(gl, SHADERS.DEBUG_DRAW);
     this.#programs.ssao = CreateProgramFromData(gl, SHADERS.SSAO);
@@ -66,7 +73,7 @@ export class Renderer {
     this.#programs.shadowmap = CreateProgramFromData(gl, SHADERS.SHADOW_MAP_DL);
     this.#programs.bloom = CreateProgramFromData(gl, SHADERS.BLOOM);
     this.#programs.deferred = CreateProgramFromData(gl, SHADERS.DEFERRED);
-    this.#programs.textured = CreateProgramFromData(gl, SHADERS.TEXTURED);
+    this.#programs.rain = CreateProgramFromData(gl, SHADERS.RAIN);
 
     this.#offscreenFB = gl.createFramebuffer();
     this.#offscreenPosTex =  gl.createTexture();
@@ -92,6 +99,9 @@ export class Renderer {
     this.#bloomFB = gl.createFramebuffer();
     this.#bloomColTex = gl.createTexture();
     this.#bloomColTex2 = gl.createTexture();
+    
+    this.#rainFB = gl.createFramebuffer();
+    this.#rainColTex = gl.createTexture();
 
     this.#quad = Quad.asAdvancedShape().createBuffers(gl);
     
@@ -188,6 +198,13 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.bindTexture(gl.TEXTURE_2D, this.#rainColTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, size.w, size.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     
     gl.bindTexture(gl.TEXTURE_2D, null);
 
@@ -231,6 +248,9 @@ export class Renderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.#bloomFB);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#bloomColTex, 0);
     // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#bloomColTex2, 0);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.#rainFB);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#rainColTex, 0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
@@ -664,6 +684,7 @@ export class Renderer {
   
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       }
 
       // Blur
@@ -694,6 +715,7 @@ export class Renderer {
   
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       }
 
       // Debug show bloom results
@@ -744,16 +766,18 @@ export class Renderer {
         prog.uExposure.update(light_mng.exposure);
       }
 
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, (this.showRain) ? this.#rainFB : null);
       gl.viewport(0, 0, w, h);
 
       gl.clearColor(0, 0, 0, 1);
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      gl.drawBuffers([
-        gl.BACK,
-      ]);
+      if (this.showRain) {
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+      } else {
+        gl.drawBuffers([gl.BACK]);
+      }
 
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
@@ -782,9 +806,7 @@ export class Renderer {
         gl.bindTexture(gl.TEXTURE_2D, this.#bloomColTex2);
       }
 
-      // gl.enable(gl.DEPTH_TEST);
       this.#drawQuad(prog);
-      // gl.disable(gl.DEPTH_TEST);
 
       prog.unbind();
 
@@ -804,10 +826,43 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
       gl.activeTexture(gl.TEXTURE0 + 7);
       gl.bindTexture(gl.TEXTURE_2D, null);
+      
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    // Rain
+    if (this.showRain) {
+      const prog = this.#programs.rain;
+      prog.use();
+
+      prog.uMatrix.update(quadMatRev.values);
+      prog.uTexture.update(0);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, w, h);
+
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      gl.drawBuffers([
+        gl.BACK,
+      ]);
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.#rainColTex);
+
+      this.#drawQuad(prog);
+
+      prog.unbind();
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
     // Debug
-    if (!this.showPartialResults) {
+    if (!this.showPartialResults && !this.showRain) {
       // Copy depth buffer
       {
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#offscreenFB);

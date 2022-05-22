@@ -79,6 +79,7 @@ export class UIManager {
       spotLights: document.getElementById("spotLights"),
       showLightsPos: document.getElementById("showLightsPos"),
       isDay: document.getElementById("isDay"),
+      showRain: document.getElementById("showRain"),
 
       cameraName: document.getElementById("cameraName"),
       forceFollow: document.getElementById("forceFollow"),
@@ -150,6 +151,7 @@ export class UIManager {
       this.#docRef.tonemappingGammaSlider.value = lightMng.gamma;
       this.#docRef.tonemappingExposure.innerHTML = CUSTOM(lightMng.exposure);
       this.#docRef.tonemappingExposureSlider.value = lightMng.exposure;
+      this.#docRef.showRain.innerHTML = (renderer.showRain) ? ON : OFF;
     }
   }
 

@@ -2,6 +2,7 @@ import { Program, Shader } from "webgl-basic-lib";
 
 import DeferredFS from '!raw-loader!./shaders/deferred.fs';
 import SSAOFS from '!raw-loader!./shaders/ssao.fs';
+import RAINFS from '!raw-loader!./shaders/rain.fs';
 
 export function CreateProgramFromData(gl, dataGen) {
   const data = dataGen(gl);
@@ -506,4 +507,28 @@ export const SHADERS = {
     ],
   }),
 
+  RAIN: (gl) => ({
+    vertex_shader_src: `#version 300 es
+    layout (location = 0) in vec3 vPos;
+    layout (location = 1) in vec2 vTex;
+    uniform mat4 uMatrix;
+    out vec2 fTex;
+    void main() {
+      fTex = vTex;
+      gl_Position = uMatrix * vec4(vPos, 1.0);
+    }
+    `,
+
+    fragment_shader_src: RAINFS,
+
+    attributes: [
+      ["vPos", 3, gl.FLOAT, 32,  0],
+      ["vTex", 2, gl.FLOAT, 32, 12],
+    ],
+
+    uniforms: [
+      ["uMatrix", "Matrix4fv"],
+      ["uTexture", "1i"],
+    ],
+  }),
 }
