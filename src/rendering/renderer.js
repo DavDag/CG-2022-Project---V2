@@ -1,6 +1,6 @@
 import { Debug, Mat4, MatrixStack, Program, Quad, toRad, Vec2, Vec3, Vec4 } from "webgl-basic-lib";
 import { CreateProgramFromData, NUM_SHADOW_CASTER, SHADERS, HIGH_SHADOW_SIZE, SSAO_SAMPLE_COUNT, SMALL_SHADOW_SIZE } from "./shaders.js";
-import { CreateSSAOKernels, CreateSSAONoise, UpdateSSAOUniforms } from "./ssao.js";
+import { CreateSSAOKernels, CreateSSAONoise } from "./ssao.js";
 
 export class Renderer {
   /** @type {WebGL2RenderingContext} */
@@ -219,7 +219,6 @@ export class Renderer {
     tmpStack.push(mat);
 
     prog.use();
-    prog.uTexture.update(0);
     prog.uView.update(camera.view.values);
     prog.uProj.update(camera.proj.values);
 
@@ -236,9 +235,7 @@ export class Renderer {
         if (submesh.hide) return;
 
         const material = material_mng.get(submesh.material);
-        material.colorTex.bind(0);
-        prog["uMaterial.shininess"].update(material.shininess);
-
+        material.updateUniforms(prog);
         gl.drawArrays(gl.TRIANGLES, submesh.index, submesh.length);
       });
 

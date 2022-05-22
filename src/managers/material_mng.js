@@ -1,4 +1,4 @@
-import { Texture } from "webgl-basic-lib";
+import { Texture, Vec3 } from "webgl-basic-lib";
 import { SingleColorTexture, TemporaryTexture } from "../rendering/textures.js";
 
 const MATERIAL_BASE_PATH = (name) => `assets/materials/${name}/${name}`;
@@ -29,12 +29,51 @@ const DEF_PROPS = {
 };
 
 export class MaterialData {
-  colorTex = null;
-  shininess = 0.0;
+  color = null;
 
-  constructor(colorTex, props) {
-    this.colorTex = colorTex;
-    this.shininess = props.shininess;
+  isComplex = null;
+  colorTex = null;
+  normalTex = null;
+
+  shininess = null;
+
+  static Simple(color, shininess) {
+    const data = new MaterialData();
+    data.isComplex = false;
+    data.color = color;
+    data.colorTex = null;
+    data.normalTex = null;
+    data.shininess = shininess;
+    return data;
+  }
+
+  static Complex(colorTex, normalTex, shininess) {
+    const data = new MaterialData();
+    data.isComplex = true;
+    data.color = null;
+    data.colorTex = colorTex;
+    data.normalTex = normalTex;
+    data.shininess = shininess;
+    return data;
+  }
+
+  updateUniforms(prog) {
+    prog["uMaterial.shininess"].update(this.shininess);
+
+    if (this.isComplex) {
+      prog["uMaterial.isComplex"].update(1);
+
+      this.colorTex.bind(0);
+      prog["uMaterial.colorTex"].update(0);
+
+      this.normalTex.bind(1);
+      prog["uMaterial.normalTex"].update(1);
+    }
+    else {
+      prog["uMaterial.isComplex"].update(0);
+
+      prog["uMaterial.color"].update(this.color.values);
+    }
   }
 }
 
@@ -276,12 +315,9 @@ export class MaterialsManager {
   #loadMaterialAsColor(alias, props, color) {
     const gl = this.#ctx;
 
-    color = color.map((c) => Math.round(c * 255.0));
-    color.push(255);
-
-    this.#materials[alias] = new MaterialData(
-      SingleColorTexture(gl, color),
-      props
+    this.#materials[alias] = MaterialData.Simple(
+      new Vec3(...color),
+      props.shininess,
     );
   }
 
@@ -289,9 +325,10 @@ export class MaterialsManager {
     const gl = this.#ctx;
     const path = MATERIAL_BASE_PATH(name);
 
-    this.#materials[alias] = new MaterialData(
+    this.#materials[alias] = MaterialData.Complex(
       TemporaryTexture(gl),
-      props
+      TemporaryTexture(gl),
+      props.shininess,
     );
 
     Texture

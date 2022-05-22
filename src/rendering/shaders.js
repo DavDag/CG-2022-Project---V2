@@ -54,6 +54,10 @@ export const SHADERS = {
     precision highp float;
 
     struct Material {
+      vec3 color;
+      int isComplex;
+      sampler2D colorTex;
+      sampler2D normalTex;
       float shininess;
     };
 
@@ -62,17 +66,22 @@ export const SHADERS = {
     in vec3 fNor;
 
     uniform Material uMaterial;
-    uniform sampler2D uTexture;
 
     layout (location = 0) out vec4 oCol;
     layout (location = 1) out vec4 oPos;
     layout (location = 2) out vec4 oNor;
 
     void main() {
-      vec3 col = texture(uTexture, fTex).rgb;
-      oCol = vec4(col, uMaterial.shininess);
-      oPos = vec4(fPos, 1.0);
-      oNor = vec4(normalize(fNor), 0.0);
+      if (uMaterial.isComplex == 0) {
+        oCol = vec4(uMaterial.color, uMaterial.shininess);
+        oPos = vec4(fPos, 1.0);
+        oNor = vec4(normalize(fNor), 0.0);
+      } else {
+        vec3 col = texture(uMaterial.colorTex, fTex).rgb;
+        oCol = vec4(col, uMaterial.shininess);
+        oPos = vec4(fPos, 1.0);
+        oNor = vec4(normalize(fNor), 0.0);
+      }
     }
     `,
 
@@ -86,7 +95,10 @@ export const SHADERS = {
       ["uModel", "Matrix4fv"],
       ["uView", "Matrix4fv"],
       ["uProj", "Matrix4fv"],
-      ["uTexture", "1i"],
+      ["uMaterial.color", "3fv"],
+      ["uMaterial.isComplex", "1i"],
+      ["uMaterial.colorTex", "1i"],
+      ["uMaterial.normalTex", "1i"],
       ["uMaterial.shininess", "1f"],
     ],
   }),
