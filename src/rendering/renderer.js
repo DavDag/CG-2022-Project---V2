@@ -841,6 +841,7 @@ export class Renderer {
       prog.uMatrix.update(quadMatRev.values);
       prog.uTexture.update(0);
       prog.uTime.update(this.#rainTime);
+      prog.uViewPos.update(camera.viewpos.values);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, w, h);

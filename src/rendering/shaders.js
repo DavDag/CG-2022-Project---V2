@@ -530,6 +530,7 @@ export const SHADERS = {
       ["uMatrix", "Matrix4fv"],
       ["uTexture", "1i"],
       ["uTime", "1f"],
+      ["uViewPos", "3fv"],
     ],
   }),
 }

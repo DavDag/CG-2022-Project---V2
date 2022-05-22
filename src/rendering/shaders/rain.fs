@@ -22,10 +22,11 @@ precision highp float;
 #define DROP_CELL_RES 20.0
 #define DROP_PRESENCE 20
 #define DROP_INTENSITY 20.0
-#define DROP_SPEED 20.0
+#define DROP_SPEED 40.0
 
 uniform sampler2D uTexture;
 uniform float uTime;
+uniform vec3 uViewPos;
 
 in vec2 fTex;
 
@@ -51,6 +52,7 @@ float Random21(vec2 inputValue, float seed) {
 vec2 Drop(vec2 uvs, float seedBase) {
   // Apply a "random" deviation on the y axis
   float shiftY = Random11(SEED_1, seedBase);
+  // uvs.y += shiftY;
   uvs.y += shiftY * uTime * DROP_SPEED;
 
   // Split into "cells"
@@ -74,7 +76,7 @@ vec2 Drop(vec2 uvs, float seedBase) {
   float hidden = step(0.8, Random21(dropIndex, seedBase + SEED_2));
 
   // Add intensity based on time-alive
-  float intensity = 1.0 - fract(uTime * 0.1 + Random21(dropIndex, seedBase + SEED_3) * 2.0) * 2.0;
+  float intensity = 1.0 - fract(uTime * 0.5 + Random21(dropIndex, seedBase + SEED_3));
   intensity = sign(intensity) * (intensity * intensity * intensity * intensity);
   intensity = clamp(intensity, 0.0, 1.0);
 
@@ -89,6 +91,15 @@ vec2 Drop(vec2 uvs, float seedBase) {
 
   // Result
   return drop;
+}
+
+// Lens distortion
+vec2 lens(vec2 uvs) {
+    float k = -0.5;
+    float kcube = 0.5;
+    float r2 = (uvs.x - 0.5) * (uvs.x - 0.5) + (uvs.y - 0.5) * (uvs.y - 0.5);
+    float f = 1.0 + r2 * (k + kcube * sqrt(r2));
+    return f * (uvs.xy - 0.5) + 0.5;
 }
 
 out vec4 oCol;
@@ -106,10 +117,13 @@ void main() {
   // Drops are simply a distortion
   uvs += drops;
 
+  // Lens effect
+  uvs = lens(uvs);
+
   // Sample color and return !
   vec3 color = textureLod(uTexture, uvs, 0.0).rgb;
   oCol = vec4(color, 1);
-  
+
   // // To see "random" results (and ensure there are no patterns)
   // float r1 = Random21(uvs, SEED_1);
   // oCol = vec4(vec3(r1), 1.0);
