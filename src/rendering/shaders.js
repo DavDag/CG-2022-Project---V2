@@ -78,9 +78,10 @@ export const SHADERS = {
         oNor = vec4(normalize(fNor), 0.0);
       } else {
         vec3 col = texture(uMaterial.colorTex, fTex).rgb;
+        vec3 nor = normalize(texture(uMaterial.normalTex, fTex).xyz * 2.0 - 1.0);
         oCol = vec4(col, uMaterial.shininess);
         oPos = vec4(fPos, 1.0);
-        oNor = vec4(normalize(fNor), 0.0);
+        oNor = vec4(nor, 0.0);
       }
     }
     `,

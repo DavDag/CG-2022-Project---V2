@@ -1,8 +1,9 @@
 import { Texture, Vec3 } from "webgl-basic-lib";
-import { SingleColorTexture, TemporaryTexture } from "../rendering/textures.js";
+import { SingleColorTexture, TemporaryColorTexture, TemporaryNormalTexture } from "../rendering/textures.js";
 
 const MATERIAL_BASE_PATH = (name) => `assets/materials/${name}/${name}`;
 const MATERIAL_COLOR_TEX = (basePath) => `${basePath}_COLOR.jpg`;
+const MATERIAL_NORMAL_TEX = (basePath) => `${basePath}_NORM.jpg`;
 
 const DEF_CONFIGS = (gl) => ({
   target: gl.TEXTURE_2D,
@@ -10,7 +11,7 @@ const DEF_CONFIGS = (gl) => ({
   format: gl.RGB,
   type: gl.UNSIGNED_BYTE,
   wrap: gl.REPEAT,
-  filter: gl.LINEAR,
+  filter: {mag: gl.LINEAR, min: gl.LINEAR_MIPMAP_LINEAR},
   genMipMap: true,
 });
 
@@ -37,27 +38,27 @@ export class MaterialData {
 
   shininess = null;
 
-  static Simple(color, shininess) {
+  static Simple(color, props) {
     const data = new MaterialData();
     data.isComplex = false;
     data.color = color;
     data.colorTex = null;
     data.normalTex = null;
-    data.shininess = shininess;
+    data.shininess = props.shininess;
     return data;
   }
 
-  static Complex(colorTex, normalTex, shininess) {
+  static Complex(colorTex, normalTex, props) {
     const data = new MaterialData();
     data.isComplex = true;
     data.color = null;
     data.colorTex = colorTex;
     data.normalTex = normalTex;
-    data.shininess = shininess;
+    data.shininess = props.shininess;
     return data;
   }
 
-  updateUniforms(prog) {
+  bindUniforms(prog) {
     prog["uMaterial.shininess"].update(this.shininess);
 
     if (this.isComplex) {
@@ -96,67 +97,44 @@ export class MaterialsManager {
 
   constructor(gl) {
     this.#ctx = gl;
-    this.#materials.debug = new MaterialData(TemporaryTexture(gl), DEF_PROPS);
+    this.#materials.debug = MaterialData.Complex(TemporaryColorTexture(gl), TemporaryNormalTexture(gl), DEF_PROPS);
 
-    // Terrain
-    this.#loadMaterial(
+    this.#loadMaterialAsColor(
       "terrain",
-      {
-        shininess: 2.0,
-      },
-      "Asphalt_004",
-      DEF_TILEABLE_CONFIGS(gl)
+      DEF_PROPS,
+      [0.5, 0.5, 0.5]
     );
 
-    // Grass
-    this.#loadMaterial(
+    this.#loadMaterialAsColor(
       "grass",
-      {
-        shininess: 2.0,
-      },
-      "Grass_005",
-      DEF_TILEABLE_CONFIGS(gl)
+      DEF_PROPS,
+      [0.2, 1.0, 0.2]
     );
 
-    // Asphalt
-    this.#loadMaterial(
+    this.#loadMaterialAsColor(
       "asphalt",
-      {
-        shininess: 2.0,
-      },
-      "Asphalt_005",
-      DEF_TILEABLE_CONFIGS(gl)
+      DEF_PROPS,
+      [0.25, 0.25, 0.25]
     );
 
-    // Tire
-    this.#loadMaterial(
+    this.#loadMaterialAsColor(
       "carTire",
-      {
-        shininess: 4.0,
-      },
-      "Rubber_Sole_001",
-      DEF_CONFIGS(gl)
+      DEF_PROPS,
+      [0.1, 0.1, 0.1]
     );
 
-    // Plastic
+    this.#loadMaterialAsColor(
+      "metal",
+      DEF_PROPS,
+      [0.6, 0.6, 0.6]
+    );
+
     this.#loadMaterialAsColor(
       "plastic",
-      {
-        shininess: 32.0,
-      }, [0.3764706, 0.3764706, 0.3764706]
+      DEF_PROPS,
+      [0.3764706, 0.3764706, 0.3764706]
     );
 
-    // Metal
-    this.#loadMaterial(
-      "metal",
-      {
-        shininess: 64.0,
-      },
-      "Metal_006",
-      DEF_CONFIGS(gl)
-    );
-
-    // TODO
     this.#loadMaterialAsColor(
       "window",
       {
@@ -326,8 +304,8 @@ export class MaterialsManager {
     const path = MATERIAL_BASE_PATH(name);
 
     this.#materials[alias] = MaterialData.Complex(
-      TemporaryTexture(gl),
-      TemporaryTexture(gl),
+      TemporaryColorTexture(gl),
+      TemporaryNormalTexture(gl),
       props.shininess,
     );
 
@@ -335,5 +313,10 @@ export class MaterialsManager {
       .FromUrl(gl, MATERIAL_COLOR_TEX(path), configs)
       .catch((err) => console.error("Unable to load material: ", name, err))
       .then((tex) => this.#materials[alias].colorTex = tex);
+
+    Texture
+      .FromUrl(gl, MATERIAL_NORMAL_TEX(path), configs)
+      .catch((err) => console.error("Unable to load material: ", name, err))
+      .then((tex) => this.#materials[alias].normalTex = tex);
   }
 }

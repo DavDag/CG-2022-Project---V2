@@ -70,5 +70,5 @@ void main() {
   occlusion = 1.0 - occlusion / float(SSAO_SAMPLE_COUNT);
 
   // Increase occlusion strength
-  oColor = clamp(pow(occlusion, 10.0), 0.0, 1.0);
+  oColor = clamp(pow(occlusion, 1.0), 0.0, 1.0);
 }

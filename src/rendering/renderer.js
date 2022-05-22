@@ -235,7 +235,7 @@ export class Renderer {
         if (submesh.hide) return;
 
         const material = material_mng.get(submesh.material);
-        material.updateUniforms(prog);
+        material.bindUniforms(prog);
         gl.drawArrays(gl.TRIANGLES, submesh.index, submesh.length);
       });
 
@@ -342,7 +342,7 @@ export class Renderer {
     const gl = this.#ctx;
     const quadMatRev = Mat4.Identity().scale(new Vec3(2, -2, 1));
 
-    var dirLightMat = null;
+    var dirLightMat = Mat4.Identity();
     var spotLightMat = [];
 
     // First pass
@@ -539,6 +539,15 @@ export class Renderer {
       this.#drawQuad(prog);
 
       prog.unbind();
+
+      // gl.activeTexture(gl.TEXTURE0);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.activeTexture(gl.TEXTURE0 + 1);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.activeTexture(gl.TEXTURE0 + 2);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.activeTexture(gl.TEXTURE0 + 3);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
     // Blur (on SSAO)
@@ -565,6 +574,9 @@ export class Renderer {
       this.#drawQuad(prog);
 
       prog.unbind();
+
+      // gl.activeTexture(gl.TEXTURE0);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
 
       // Debug show occ results
       if (this.showOccResults) {
@@ -649,6 +661,21 @@ export class Renderer {
       this.#drawQuad(prog);
 
       prog.unbind();
+
+      // gl.activeTexture(gl.TEXTURE0);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.activeTexture(gl.TEXTURE0 + 1);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.activeTexture(gl.TEXTURE0 + 2);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.activeTexture(gl.TEXTURE0 + 3);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.activeTexture(gl.TEXTURE0 + 4);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.activeTexture(gl.TEXTURE0 + 5);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.activeTexture(gl.TEXTURE0 + 6);
+      // gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
     }
 
     // Debug
