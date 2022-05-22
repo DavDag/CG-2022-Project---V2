@@ -60,15 +60,14 @@ export class MaterialData {
 
   bindUniforms(prog) {
     prog["uMaterial.shininess"].update(this.shininess);
+    prog["uMaterial.colorTex"].update(0);
+    prog["uMaterial.normalTex"].update(1);
 
     if (this.isComplex) {
       prog["uMaterial.isComplex"].update(1);
 
       this.colorTex.bind(0);
-      prog["uMaterial.colorTex"].update(0);
-
       this.normalTex.bind(1);
-      prog["uMaterial.normalTex"].update(1);
     }
     else {
       prog["uMaterial.isComplex"].update(0);
@@ -108,7 +107,7 @@ export class MaterialsManager {
     this.#loadMaterialAsColor(
       "grass",
       DEF_PROPS,
-      [0.2, 1.0, 0.2]
+      [0.270, 0.580, 0.262]
     );
 
     this.#loadMaterialAsColor(
@@ -137,9 +136,7 @@ export class MaterialsManager {
 
     this.#loadMaterialAsColor(
       "window",
-      {
-        shininess: 64.0,
-      },
+      DEF_PROPS,
       [0.9372549, 0.9372549, 0.9372549]
     );
 
@@ -295,7 +292,7 @@ export class MaterialsManager {
 
     this.#materials[alias] = MaterialData.Simple(
       new Vec3(...color),
-      props.shininess,
+      props,
     );
   }
 

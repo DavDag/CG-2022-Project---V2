@@ -317,6 +317,9 @@ export class Renderer {
 
     prog.unbind();
 
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
     tmpStack.pop();
     tmpStack.pop();
   }
@@ -540,14 +543,14 @@ export class Renderer {
 
       prog.unbind();
 
-      // gl.activeTexture(gl.TEXTURE0);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
-      // gl.activeTexture(gl.TEXTURE0 + 1);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
-      // gl.activeTexture(gl.TEXTURE0 + 2);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
-      // gl.activeTexture(gl.TEXTURE0 + 3);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0 + 1);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0 + 2);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0 + 3);
+      gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
     // Blur (on SSAO)
@@ -575,8 +578,8 @@ export class Renderer {
 
       prog.unbind();
 
-      // gl.activeTexture(gl.TEXTURE0);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, null);
 
       // Debug show occ results
       if (this.showOccResults) {
@@ -662,20 +665,20 @@ export class Renderer {
 
       prog.unbind();
 
-      // gl.activeTexture(gl.TEXTURE0);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
-      // gl.activeTexture(gl.TEXTURE0 + 1);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
-      // gl.activeTexture(gl.TEXTURE0 + 2);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
-      // gl.activeTexture(gl.TEXTURE0 + 3);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
-      // gl.activeTexture(gl.TEXTURE0 + 4);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
-      // gl.activeTexture(gl.TEXTURE0 + 5);
-      // gl.bindTexture(gl.TEXTURE_2D, null);
-      // gl.activeTexture(gl.TEXTURE0 + 6);
-      // gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0 + 1);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0 + 2);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0 + 3);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0 + 4);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0 + 5);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.activeTexture(gl.TEXTURE0 + 6);
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
     }
 
     // Debug

@@ -249,7 +249,7 @@ export class App {
     this.#lightMng.addDL(false, new DLight(
       new Vec3(1, -1, 1).normalize(),
       new Vec3(1, 1, 1),
-      {amb: 0.05, dif: 0.1, spe: 0.0}
+      {amb: 0.05, dif: 0.0, spe: 0.0}
     ));
 
     window.addEventListener("resize", (e) => {
