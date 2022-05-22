@@ -34,9 +34,9 @@ export class StreetLamp {
 
   #update() {
     this.#cachedMat = Mat4.Identity()
-      .scale(new Vec3(1, 1.5, 1))
       .translate(this.#pos)
       .rotate(toRad(this.#rot), new Vec3(0, 1, 0))
+      .scale(new Vec3(1, 1.5, 1))
     ;
     this.#cachedLightPos = this.#lightPos.transform(this.#cachedMat).toVec3();
   }

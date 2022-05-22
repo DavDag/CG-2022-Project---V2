@@ -95,7 +95,7 @@ export class Renderer {
     this.aaMaxSamples = gl.getParameter(gl.MAX_SAMPLES);
 
     gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size.w, size.h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, size.w, size.h, 0, gl.RGBA, gl.FLOAT, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -206,7 +206,7 @@ export class Renderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
-  #drawImplForObj(object, material_mng, camera) {
+  #drawImplForObj(object, material_mng, light_mng, camera) {
     const obj = object.obj;
     const mat = object.matrix;
 
@@ -234,7 +234,7 @@ export class Renderer {
       mesh.sections.forEach((submesh) => {
         if (submesh.hide) return;
 
-        const material = material_mng.get(submesh.material);
+        const material = material_mng.get(light_mng.isDay, submesh.material);
         material.bindUniforms(prog);
         gl.drawArrays(gl.TRIANGLES, submesh.index, submesh.length);
       });
@@ -367,14 +367,13 @@ export class Renderer {
 
       gl.enable(gl.CULL_FACE);
       gl.cullFace(gl.BACK);
-      terrain.forEach((object) => this.#drawImplForObj(object, material_mng, camera));
-      objects.forEach((object) => this.#drawImplForObj(object, material_mng, camera));
-      this.#drawImplForObj(player, material_mng, camera);
+      terrain.forEach((object) => this.#drawImplForObj(object, material_mng, light_mng, camera));
+      objects.forEach((object) => this.#drawImplForObj(object, material_mng, light_mng, camera));
+      this.#drawImplForObj(player, material_mng, light_mng, camera);
       gl.disable(gl.CULL_FACE);
+      gl.disable(gl.DEPTH_TEST);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-      gl.disable(gl.DEPTH_TEST);
     }
 
     // Shadows (Dir Light)
@@ -384,6 +383,7 @@ export class Renderer {
       prog.isDepthLinear.update(1);
 
       dirLightMat = Mat4.Identity()
+        // .apply(Mat4.Orthogonal(-10, 10, -10, 10, 1.0, 75.0))
         .apply(Mat4.Orthogonal(-30, 30, -20, 20, 1.0, 75.0))
         .apply(Mat4.LookAt(new Vec3(-20, 20, -20), Vec3.Zeros(), new Vec3(0, 1, 0)));
 
@@ -635,7 +635,6 @@ export class Renderer {
       gl.clearColor(0, 0, 0, 1);
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      gl.enable(gl.DEPTH_TEST);
 
       gl.drawBuffers([
         gl.BACK,
@@ -661,7 +660,9 @@ export class Renderer {
         gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.#spotShadowsColTex);
       }
 
+      // gl.enable(gl.DEPTH_TEST);
       this.#drawQuad(prog);
+      // gl.disable(gl.DEPTH_TEST);
 
       prog.unbind();
 
@@ -699,32 +700,31 @@ export class Renderer {
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
       }
+      
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, w, h);
+      gl.drawBuffers([
+        gl.BACK,
+      ]);
 
       // Meshes
       if (Debug.isActive) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, w, h);
-  
-        gl.drawBuffers([
-          gl.BACK,
-        ]);
-  
-        // gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         terrain.forEach((object) => this.#drawDebug(object, camera));
         objects.forEach((object) => this.#drawDebug(object, camera));
         this.#drawDebug(player, camera);
         gl.disable(gl.BLEND);
-        // gl.disable(gl.DEPTH_TEST);
-  
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.disable(gl.DEPTH_TEST);
       }
-
+      
       // Lights
       this.#stack.push(camera.viewproj);
       light_mng.draw(this.#stack);
       this.#stack.pop();
+ 
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
   }
 }

@@ -21,7 +21,7 @@ vt ${NUM_TILE} 0
 
 vn 0 1 0
 
-usemtl terrain
+usemtl terrainTerrain
 
 f 1/1/1 2/2/1 3/3/1 4/4/1
 `;

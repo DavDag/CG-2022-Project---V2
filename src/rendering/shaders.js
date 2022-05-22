@@ -59,6 +59,7 @@ export const SHADERS = {
       sampler2D colorTex;
       sampler2D normalTex;
       float shininess;
+      int metadata;
     };
 
     in vec3 fPos;
@@ -74,13 +75,13 @@ export const SHADERS = {
     void main() {
       if (uMaterial.isComplex == 0) {
         oCol = vec4(uMaterial.color, uMaterial.shininess);
-        oPos = vec4(fPos, 1.0);
+        oPos = vec4(fPos, float(uMaterial.metadata));
         oNor = vec4(normalize(fNor), 0.0);
       } else {
         vec3 col = texture(uMaterial.colorTex, fTex).rgb;
         vec3 nor = normalize(texture(uMaterial.normalTex, fTex).xyz * 2.0 - 1.0);
         oCol = vec4(col, uMaterial.shininess);
-        oPos = vec4(fPos, 1.0);
+        oPos = vec4(fPos, float(uMaterial.metadata));
         oNor = vec4(nor, 0.0);
       }
     }
@@ -101,6 +102,7 @@ export const SHADERS = {
       ["uMaterial.colorTex", "1i"],
       ["uMaterial.normalTex", "1i"],
       ["uMaterial.shininess", "1f"],
+      ["uMaterial.metadata", "1i"],
     ],
   }),
 

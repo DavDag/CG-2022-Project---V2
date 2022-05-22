@@ -4,12 +4,15 @@
 #define NUM_SL 32
 #define NUM_SHADOW_CASTER 32
 
+#define IS_LIT_FLAG (1 << 0)
+
 precision highp float;
 precision highp int;
 precision highp sampler2DArray;
 
 struct Material {
   float shininess;
+  bool isLit;
 };
 
 struct DLight {
@@ -153,10 +156,10 @@ vec3 CalcSpotLight(SLight light, vec3 viewDir, vec3 position, vec3 normal, vec3 
   return ambient + invShadowF * (diffuse + specular);
 }
 
-float CalcDirShadow(vec4 pos, vec3 normal, float bias) {
+float CalcDirShadow(vec3 pos, vec3 normal, float bias) {
   // Normal offset
   // https://digitalrune.github.io/DigitalRune-Documentation/html/3f4d959e-9c98-4a97-8d85-7a73c26145d7.htm
-  vec4 position = vec4(pos.xyz + normal * 32.0 * (1.0 / 8192.0), pos.w);
+  vec4 position = vec4(pos.xyz + normal * 32.0 * (1.0 / 8192.0), 1.0);
 
   // Find position in light space
   vec4 fPosInLightSpace = uDirLightMat * position;
@@ -194,10 +197,10 @@ float CalcDirShadow(vec4 pos, vec3 normal, float bias) {
   return tmp;
 }
 
-float CalcSpotShadow(int index, vec4 pos, vec3 normal, float bias) {
+float CalcSpotShadow(int index, vec3 pos, vec3 normal, float bias) {
   // Normal offset
   // https://digitalrune.github.io/DigitalRune-Documentation/html/3f4d959e-9c98-4a97-8d85-7a73c26145d7.htm
-  vec4 position = vec4(pos.xyz + normal * 32.0 * (1.0 / 1024.0), pos.w);
+  vec4 position = vec4(pos.xyz + normal * 32.0 * (1.0 / 1024.0), 1.0);
 
   // Find position in light space
   vec4 fPosInLightSpace = uSpotLightMat[index] * position;
@@ -271,54 +274,61 @@ void main() {
   // Discard if nothing was drawn
   if (fDepth == 1.0) discard;
 
-  ////////////////////////////////////
-  // Shadows: Dir Light
-  ////////////////////////////////////
-  float dirShadow = 0.0;
-  if (uUseDirLightForShadow == 1) {
-    dirShadow = CalcDirShadow(texPos, fNor, 0.0000);
-  }
-
-  ////////////////////////////////////
-  // Shadows: Spot Light
-  ////////////////////////////////////
-  float spotShadow = 0.0;
-  for (int i = 0; i < uUseSpotLightForShadow; ++i) {
-    spotShadow += CalcSpotShadow(i, texPos, fNor, 0.000);
-  }
-  
-  // Calculate shadow factor
-  float invShadowF = 1.0 - min(dirShadow + spotShadow, 1.0);
-
   // Load material
   Material material;
   material.shininess = texCol.a;
-
-  // View direction
-  vec3 viewDir = normalize(uViewPos - fPos);
+  material.isLit = (int(texPos.a) & IS_LIT_FLAG) == IS_LIT_FLAG;
 
   // Store result
   vec3 result = vec3(0, 0, 0);
 
-  ////////////////////////////////////
-  // Directional Light
-  ////////////////////////////////////
-  result += CalcDirLight(uDirectionalLight, viewDir, fNor, fCol, fOcc, invShadowF, material);
+  // Do lightning calculation ONLY if material is lit
+  if (material.isLit) {
+    ////////////////////////////////////
+    // Shadows: Dir Light
+    ////////////////////////////////////
+    float dirShadow = 0.0;
+    if (uUseDirLightForShadow == 1) {
+      dirShadow = CalcDirShadow(fPos, fNor, 0.0000);
+    }
 
-  for (int p = 0; p < NUM_PL; ++p) {
     ////////////////////////////////////
-    // Point Light
+    // Shadows: Spot Light
     ////////////////////////////////////
-    result += CalcPointLight(uPointLights[p], viewDir, fPos, fNor, fCol, fOcc, invShadowF, material);
+    float spotShadow = 0.0;
+    for (int i = 0; i < uUseSpotLightForShadow; ++i) {
+      spotShadow += CalcSpotShadow(i, fPos, fNor, 0.000);
+    }
+    
+    // Calculate shadow factor
+    float invShadowF = 1.0 - min(dirShadow + spotShadow, 1.0);
+
+    // View direction
+    vec3 viewDir = normalize(uViewPos - fPos);
+
+    ////////////////////////////////////
+    // Directional Light
+    ////////////////////////////////////
+    result += CalcDirLight(uDirectionalLight, viewDir, fNor, fCol, fOcc, invShadowF, material);
+
+    for (int p = 0; p < NUM_PL; ++p) {
+      ////////////////////////////////////
+      // Point Light
+      ////////////////////////////////////
+      result += CalcPointLight(uPointLights[p], viewDir, fPos, fNor, fCol, fOcc, invShadowF, material);
+    }
+
+    for (int s = 0; s < NUM_SL; ++s) {
+      ////////////////////////////////////
+      // Spot Light
+      ////////////////////////////////////
+      float shadowF = CalcSpotShadow(s, fPos, fNor, 0.000);
+      result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, 1.0 - shadowF, material);
+      // result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, invShadowF, material);
+    }
   }
-
-  for (int s = 0; s < NUM_SL; ++s) {
-    ////////////////////////////////////
-    // Spot Light
-    ////////////////////////////////////
-    float shadowF = CalcSpotShadow(s, texPos, fNor, 0.000);
-    result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, 1.0 - shadowF, material);
-    // result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, invShadowF, material);
+  else {
+    result = fCol;
   }
 
   oColor = vec4(result, 1.0);

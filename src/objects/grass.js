@@ -19,7 +19,7 @@ vt ${sz.w / 2} 0
 
 vn 0 1 0
 
-usemtl grass
+usemtl terrainGrass
 
 f 1/1/1 2/2/1 3/3/1 4/4/1
 `);

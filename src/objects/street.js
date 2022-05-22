@@ -44,7 +44,7 @@ vt ${(sz - ssh) / 2} 0
 
 vn 0 1 0
 
-usemtl asphalt
+usemtl terrainAsphalt
 
 f 1/1/1 2/2/1 3/3/1 4/4/1
 f 5/5/1 6/6/1 7/7/1 8/8/1
