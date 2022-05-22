@@ -529,6 +529,7 @@ export const SHADERS = {
     uniforms: [
       ["uMatrix", "Matrix4fv"],
       ["uTexture", "1i"],
+      ["uTime", "1f"],
     ],
   }),
 }

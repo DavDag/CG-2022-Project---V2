@@ -45,7 +45,7 @@ export class Renderer {
   showDirLightDepthTex = false;
   showBloomResults = false;
 
-  showRain = true;
+  showRain = false;
 
   #quad = null;
 
@@ -388,7 +388,10 @@ export class Renderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
   }
 
-  draw(camera, light_mng, material_mng, player, objects, terrain) {
+  #rainTime = 0;
+  draw(dt, camera, light_mng, material_mng, player, objects, terrain) {
+    this.#rainTime += dt / 1000.0;
+
     if (!this.#size) return;
     const [w, h] = this.#size.values;
     const gl = this.#ctx;
@@ -837,6 +840,7 @@ export class Renderer {
 
       prog.uMatrix.update(quadMatRev.values);
       prog.uTexture.update(0);
+      prog.uTime.update(this.#rainTime);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, w, h);

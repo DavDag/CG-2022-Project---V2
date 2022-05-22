@@ -79,7 +79,7 @@ export class CameraManager {
     }
   };
 
-  #selected = 4;
+  #selected = 0;
   
   #cachedViewMat = Mat4.Identity();
   #cachedProjMat = Mat4.Identity();

@@ -299,8 +299,9 @@ export class App {
     this.#updateUI(true);
   }
 
-  #draw() {
+  #draw(dt) {
     this.#renderer.draw(
+      dt,
       this.#cameraMng.current,
       this.#lightMng,
       this.#materialMng,
@@ -319,7 +320,7 @@ export class App {
         const dt = UpdateFps(now);
         // TODO: Profiling
         this.#update(dt);
-        this.#draw();
+        this.#draw(dt);
         requestAnimationFrame(fkStep(draw));
         // requestAnimationFrame(draw);
       } catch(e) {

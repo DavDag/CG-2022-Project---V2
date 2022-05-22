@@ -95,7 +95,7 @@ export class LightManager {
 
   #isDay = true;
   get isDay() { return this.#isDay; }
-  set isDay(value) { this.#isDay = value; this.#exposure = (this.isDay) ? 0.1 : 1.0; }
+  set isDay(value) { this.#isDay = value; this.#exposure = (this.isDay) ? 0.2 : 1.0; }
 
   constructor(gl) {
     this.#ctx = gl;
