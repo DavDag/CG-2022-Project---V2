@@ -89,10 +89,13 @@ export class LightManager {
   };
 
   show = false;
-  isDay = true;
   dirLightsOff = false;
   pointLightsOff = false;
   spotLightsOff = false;
+
+  #isDay = true;
+  get isDay() { return this.#isDay; }
+  set isDay(value) { this.#isDay = value; this.#exposure = (this.isDay) ? 0.1 : 1.0; }
 
   constructor(gl) {
     this.#ctx = gl;
@@ -101,6 +104,13 @@ export class LightManager {
   }
 
   get src() { return ((this.isDay) ? this.#day : this.#night); }
+
+  #gamma = 1.0;
+  get gamma() { return this.#gamma; }
+  set gamma(value) { this.#gamma = value; }
+  #exposure = 0.2;
+  get exposure() { return this.#exposure; }
+  set exposure(value) { this.#exposure = value; }
 
   get spotLightCount() { return this.src.SL.length; }
   spotLightPos(index) { return (this.src.SL[index] ?? DEFAULT_SL).pos; }

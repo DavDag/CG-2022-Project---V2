@@ -29,6 +29,7 @@ const CUSTOM = (txt) => ("<span style=\"color:#0FF\">" + txt + "</span>");
 
 export class UIManager {
   #ctx = null;
+  #handler = null;
   #docRef = {};
   #showExtFunctions = false;
 
@@ -38,8 +39,9 @@ export class UIManager {
     this.#showExtFunctions = value;
   }
 
-  constructor(gl) {
+  constructor(gl, handler) {
     this.#ctx = gl;
+    this.#handler = handler;
     this.#loadFromDocument();
   }
 
@@ -54,6 +56,10 @@ export class UIManager {
 
       accMeter: document.getElementById("accMeter"),
       speedMeter: document.getElementById("speedMeter"),
+      tonemappingGamma: document.getElementById("tonemappingGamma"),
+      tonemappingGammaSlider: document.getElementById("tonemappingGammaSlider"),
+      tonemappingExposure: document.getElementById("tonemappingExposure"),
+      tonemappingExposureSlider: document.getElementById("tonemappingExposureSlider"),
 
       debugMeshes: document.getElementById("debugMeshes"),
       aaMethod: document.getElementById("aaMethod"),
@@ -87,6 +93,9 @@ export class UIManager {
     
     this.#docRef.vendor.innerHTML = CUSTOM(vendor);
     this.#docRef.renderer.innerHTML = CUSTOM(renderer);
+
+    tonemappingGammaSlider.oninput = (event) => { this.#handler.ongammachange(event.target.value) };
+    tonemappingExposureSlider.oninput = (event) => { this.#handler.onexposurechange(event.target.value) };
   }
 
   #update(
@@ -135,6 +144,10 @@ export class UIManager {
       // this.#docRef.aaSampleMethod.innerHTML = CUSTOM((renderer.aaSamples == 0) ? "None" : "Native x" + renderer.aaSamples);
       this.#docRef.ssaoResults.innerHTML = (renderer.showOccResults) ? ON : OFF;
       this.#docRef.dirLightDepthTex.innerHTML = (renderer.showDirLightDepthTex) ? ON : OFF;
+      this.#docRef.tonemappingGamma.innerHTML = CUSTOM(lightMng.gamma);
+      this.#docRef.tonemappingGammaSlider.value = lightMng.gamma;
+      this.#docRef.tonemappingExposure.innerHTML = CUSTOM(lightMng.exposure);
+      this.#docRef.tonemappingExposureSlider.value = lightMng.exposure;
     }
   }
 

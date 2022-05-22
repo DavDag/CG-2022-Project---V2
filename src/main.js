@@ -212,25 +212,41 @@ export class App {
       }
     }
     this.#player.onKeyDown(event);
-
-    this.#uiMng.updateRequested(
-      this,
-      this.#player,
-      this.#lightMng,
-      this.#cameraMng,
-      this.#renderer,
-    );
+    this.#updateUI(false);
   }
 
   onKeyUp(event) {
     this.#player.onKeyUp(event);
   }
 
+  #updateUI(rt) {
+    if (!rt) {
+      this.#uiMng.updateRequested(
+        this,
+        this.#player,
+        this.#lightMng,
+        this.#cameraMng,
+        this.#renderer,
+      );
+    } else {
+      this.#uiMng.updateRealTime(
+        this,
+        this.#player,
+        this.#lightMng,
+        this.#cameraMng,
+        this.#renderer,
+      );
+    }
+  }
+
   #setup() {
     CreateTile(this.#objects, this.#terrain);
 
     const gl = this.#ctx;
-    this.#uiMng = new UIManager(gl);
+    this.#uiMng = new UIManager(gl, {
+      ongammachange: (value) => { this.#lightMng.gamma = value; this.#updateUI(false); },
+      onexposurechange: (value) => { this.#lightMng.exposure = value; this.#updateUI(false); },
+    });
     this.#lightMng = new LightManager(gl);
     this.#cameraMng = new CameraManager(gl);
     this.#materialMng = new MaterialsManager(gl);
@@ -265,27 +281,14 @@ export class App {
       }
     });
 
-    this.#uiMng.updateRequested(
-      this,
-      this.#player,
-      this.#lightMng,
-      this.#cameraMng,
-      this.#renderer,
-    );
+    this.#updateUI(false);
   }
 
   #update(dt) {
     this.#player.update(dt);
     this.#objects.forEach((obj) => obj.update(dt));
     this.#cameraMng.updatePlayerMat(this.#player.posDirMatrix);
-
-    this.#uiMng.updateRealTime(
-      this,
-      this.#player,
-      this.#lightMng,
-      this.#cameraMng,
-      this.#renderer,
-    );
+    this.#updateUI(true);
   }
 
   #draw() {

@@ -632,8 +632,8 @@ export class Renderer {
           prog["uSpotLightMat[" + ind + "]"].update(mat.values);
         });
 
-        prog.uGamma.update(2.2);
-        prog.uExposure.update(light_mng.isDay ? 0.1 : 1.0);
+        prog.uGamma.update(light_mng.gamma);
+        prog.uExposure.update(light_mng.exposure);
       }
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
