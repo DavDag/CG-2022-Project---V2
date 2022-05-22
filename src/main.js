@@ -302,12 +302,14 @@ export class App {
   async run(gl) {
     this.#ctx = gl;
     this.#setup();
+    // const fkStep = (fn) => (() => { requestAnimationFrame(fn); });
     const draw = (now) => {
       try {
         const dt = UpdateFps(now);
         // TODO: Profiling
         this.#update(dt);
         this.#draw();
+        // requestAnimationFrame(fkStep(draw));
         requestAnimationFrame(draw);
       } catch(e) {
         console.error(e);

@@ -462,6 +462,9 @@ export const SHADERS = {
         ["uSpotLightMat[" + ind + "]", "Matrix4fv"],
       ])).flat()),
       ["uSpotShadowTexArr", "1i"],
+
+      ["uGamma", "1f"],
+      ["uExposure", "1f"],
     ],
   }),
 
