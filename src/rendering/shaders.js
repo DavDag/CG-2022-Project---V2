@@ -360,7 +360,7 @@ export const SHADERS = {
     precision highp float;
     uniform sampler2D uTexture;
     in vec2 fTex;
-    out float oCol;
+    out vec4 oCol;
     void main() {
       vec2 texelSize = 1.0 / vec2(textureSize(uTexture, 0));
       
@@ -373,7 +373,7 @@ export const SHADERS = {
         }
       }
 
-      oCol = result / (4.0 * 4.0);
+      oCol = vec4(vec3(result / (4.0 * 4.0)), 1.0);
     }
     `,
 
@@ -458,6 +458,7 @@ export const SHADERS = {
       ["uNorTex", "1i"],
       ["uDepthTex", "1i"],
       ["uSSAOTex", "1i"],
+      ["uBloomTex", "1i"],
 
       ["uDirectionalLight.dir", "3fv"],
       ["uDirectionalLight.col", "3fv"],

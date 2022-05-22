@@ -33,6 +33,7 @@ export class Renderer {
 
   #bloomFB = null;
   #bloomColTex = null;
+  #bloomColTex2 = null;
 
   aaSamples = 0;
   aaMaxSamples = 0;
@@ -90,6 +91,7 @@ export class Renderer {
 
     this.#bloomFB = gl.createFramebuffer();
     this.#bloomColTex = gl.createTexture();
+    this.#bloomColTex2 = gl.createTexture();
 
     this.#quad = Quad.asAdvancedShape().createBuffers(gl);
     
@@ -179,6 +181,13 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.bindTexture(gl.TEXTURE_2D, this.#bloomColTex2);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, size.w, size.h, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     
     gl.bindTexture(gl.TEXTURE_2D, null);
 
@@ -221,6 +230,7 @@ export class Renderer {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.#bloomFB);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#bloomColTex, 0);
+    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#bloomColTex2, 0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
@@ -626,31 +636,65 @@ export class Renderer {
 
     // Bloom
     {
-      const prog = this.#programs.bloom;
-      prog.use();
+      // Mask
+      {
+        const prog = this.#programs.bloom;
+        prog.use();
+  
+        prog.uMatrix.update(quadMatRev.values);
+        prog.uTexture.update(0);
+  
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.#bloomFB);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#bloomColTex, 0);
+        gl.viewport(0, 0, w, h);
+  
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+  
+        gl.drawBuffers([
+          gl.COLOR_ATTACHMENT0,
+        ]);
+  
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
+  
+        this.#drawQuad(prog);
+  
+        prog.unbind();
+  
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+      }
 
-      prog.uMatrix.update(quadMatRev.values);
-      prog.uTexture.update(0);
-
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#bloomFB);
-      gl.viewport(0, 0, w, h);
-
-      gl.clearColor(0, 0, 0, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-
-      gl.drawBuffers([
-        gl.COLOR_ATTACHMENT0,
-      ]);
-
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
-
-      this.#drawQuad(prog);
-
-      prog.unbind();
-
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, null);
+      // Blur
+      {
+        const prog = this.#programs.blur;
+        prog.use();
+  
+        prog.uMatrix.update(quadMatRev.values);
+        prog.uTexture.update(0);
+        
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.#bloomFB);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#bloomColTex2, 0);
+        gl.viewport(0, 0, w, h);
+  
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+  
+        gl.drawBuffers([
+          gl.COLOR_ATTACHMENT0,
+        ]);
+  
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.#bloomColTex);
+  
+        this.#drawQuad(prog);
+  
+        prog.unbind();
+  
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+      }
 
       // Debug show bloom results
       if (this.showBloomResults) {
@@ -685,16 +729,13 @@ export class Renderer {
 
       if (!this.showPartialResults) {
         prog.uViewPos.update(camera.viewpos.values);
-        prog.uSSAOTex.update(4);
         
         light_mng.updateUniforms(prog);
 
         prog.uUseDirLightForShadow.update(light_mng.isDay ? 1 : 0);
         prog.uDirLightMat.update(dirLightMat.values);
-        prog.uDirShadowTex.update(5);
         
         prog.uUseSpotLightForShadow.update(spotLightMat.length);
-        prog.uSpotShadowTexArr.update(6);
         spotLightMat.forEach((mat, ind) => {
           prog["uSpotLightMat[" + ind + "]"].update(mat.values);
         });
@@ -724,14 +765,21 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D, this.#offscreenDepthTex);
 
       if (!this.showPartialResults) {
+        prog.uSSAOTex.update(4);
         gl.activeTexture(gl.TEXTURE0 + 4);
         gl.bindTexture(gl.TEXTURE_2D, this.#ssaoBlurColTex);
 
+        prog.uDirShadowTex.update(5);
         gl.activeTexture(gl.TEXTURE0 + 5);
         gl.bindTexture(gl.TEXTURE_2D, this.#dirShadowsColTex);
 
+        prog.uSpotShadowTexArr.update(6);
         gl.activeTexture(gl.TEXTURE0 + 6);
         gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.#spotShadowsColTex);
+
+        prog.uBloomTex.update(7);
+        gl.activeTexture(gl.TEXTURE0 + 7);
+        gl.bindTexture(gl.TEXTURE_2D, this.#bloomColTex2);
       }
 
       // gl.enable(gl.DEPTH_TEST);
@@ -754,6 +802,8 @@ export class Renderer {
       gl.bindTexture(gl.TEXTURE_2D, null);
       gl.activeTexture(gl.TEXTURE0 + 6);
       gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
+      gl.activeTexture(gl.TEXTURE0 + 7);
+      gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
     // Debug

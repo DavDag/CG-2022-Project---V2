@@ -60,6 +60,7 @@ uniform sampler2D uColTex;
 uniform sampler2D uNorTex;
 uniform sampler2D uDepthTex;
 uniform sampler2D uSSAOTex;
+uniform sampler2D uBloomTex;
 
 uniform int uUseDirLightForShadow;
 uniform mat4 uDirLightMat;
@@ -267,6 +268,7 @@ void main() {
   vec4 texNor = textureLod(uNorTex, fTex, 0.0);
   vec4 texDepth = textureLod(uDepthTex, fTex, 0.0);
   vec4 texSSAO = textureLod(uSSAOTex, fTex, 0.0);
+  vec4 texBloom = textureLod(uBloomTex, fTex, 0.0);
 
   // Read values from samples
   vec3 fPos = texPos.xyz;
@@ -274,6 +276,7 @@ void main() {
   vec3 fNor = texNor.xyz;
   float fDepth = texDepth.x;
   float fOcc = texSSAO.x;
+  vec3 fBloom = texBloom.rgb;
 
   // Discard if nothing was drawn
   if (fDepth == 1.0) {
@@ -330,6 +333,8 @@ void main() {
   else {
     result = fCol;
   }
+
+  result += fBloom;
 
   ////////////////////////////////////
   // Tone Mapping
