@@ -360,7 +360,11 @@ export class Renderer {
         gl.COLOR_ATTACHMENT3,
       ]);
 
-      gl.clearColor(0, 0, 0, 1);
+      if (light_mng.isDay) {
+        gl.clearColor(1, 1, 1, 1);
+      } else {
+        gl.clearColor(0, 0, 0, 1);
+      }
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.enable(gl.DEPTH_TEST);

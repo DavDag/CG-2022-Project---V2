@@ -12,6 +12,7 @@ precision highp sampler2DArray;
 
 struct Material {
   float shininess;
+  float specular;
   bool isLit;
 };
 
@@ -87,7 +88,7 @@ vec3 CalcDirLight(DLight light, vec3 viewDir, vec3 normal, vec3 color, float occ
   // Compute each component
   vec3 ambient = light.amb * light.col * color * occlusion;
   vec3 diffuse = light.dif * light.col * diff * color;
-  vec3 specular = light.spe * light.col * spec;
+  vec3 specular = light.spe * light.col * spec * material.specular;
 
   // Result
   return ambient + invShadowF * (diffuse + specular);
@@ -111,7 +112,7 @@ vec3 CalcPointLight(PLight light, vec3 viewDir, vec3 position, vec3 normal, vec3
   // Compute each component
   vec3 ambient = light.amb * light.col * color * occlusion;
   vec3 diffuse = light.dif * light.col * diff * color;
-  vec3 specular = light.spe * light.col * spec;
+  vec3 specular = light.spe * light.col * spec * material.specular;
 
   // Add attenuation
   ambient *= attenuation;
@@ -145,7 +146,7 @@ vec3 CalcSpotLight(SLight light, vec3 viewDir, vec3 position, vec3 normal, vec3 
   // Compute each component
   vec3 ambient = light.amb * light.col * color * occlusion;
   vec3 diffuse = light.dif * light.col * diff * color;
-  vec3 specular = light.spe * light.col * spec;
+  vec3 specular = light.spe * light.col * spec * material.specular;
 
   // Add attenuation and intensity
   ambient *= attenuation * intensity;
@@ -272,15 +273,19 @@ void main() {
   float fOcc = texSSAO.x;
 
   // Discard if nothing was drawn
-  if (fDepth == 1.0) discard;
+  if (fDepth == 1.0) {
+    oColor = vec4(fCol, 1.0);
+    return;
+  }
 
   // Load material
   Material material;
   material.shininess = texCol.a;
+  material.specular = texNor.a;
   material.isLit = (int(texPos.a) & IS_LIT_FLAG) == IS_LIT_FLAG;
 
   // Store result
-  vec3 result = vec3(0, 0, 0);
+  vec3 result = vec3(0);
 
   // Do lightning calculation ONLY if material is lit
   if (material.isLit) {
@@ -309,7 +314,7 @@ void main() {
     ////////////////////////////////////
     // Directional Light
     ////////////////////////////////////
-    result += CalcDirLight(uDirectionalLight, viewDir, fNor, fCol, fOcc, invShadowF, material);
+    result += CalcDirLight(uDirectionalLight, viewDir, fNor, fCol, fOcc, 1.0 - dirShadow, material);
 
     for (int p = 0; p < NUM_PL; ++p) {
       ////////////////////////////////////
@@ -322,9 +327,9 @@ void main() {
       ////////////////////////////////////
       // Spot Light
       ////////////////////////////////////
-      float shadowF = CalcSpotShadow(s, fPos, fNor, 0.000);
-      result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, 1.0 - shadowF, material);
-      // result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, invShadowF, material);
+      // float shadowF = CalcSpotShadow(s, fPos, fNor, 0.000);
+      // result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, 1.0 - shadowF, material);
+      result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, invShadowF, material);
     }
   }
   else {

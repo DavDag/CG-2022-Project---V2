@@ -14,7 +14,7 @@ export function CreateProgramFromData(gl, dataGen) {
   return program;
 }
 
-export const SSAO_SAMPLE_COUNT = 32;
+export const SSAO_SAMPLE_COUNT = 128;
 export const NUM_SHADOW_CASTER = 32;
 export const NUM_PL = 4;
 export const NUM_SL = 32;
@@ -58,6 +58,7 @@ export const SHADERS = {
       int isComplex;
       sampler2D colorTex;
       sampler2D normalTex;
+      sampler2D specularTex;
       float shininess;
       int metadata;
     };
@@ -80,9 +81,10 @@ export const SHADERS = {
       } else {
         vec3 col = texture(uMaterial.colorTex, fTex).rgb;
         vec3 nor = normalize(texture(uMaterial.normalTex, fTex).xyz * 2.0 - 1.0);
+        float specularF = texture(uMaterial.specularTex, fTex).r;
         oCol = vec4(col, uMaterial.shininess);
         oPos = vec4(fPos, float(uMaterial.metadata));
-        oNor = vec4(nor, 0.0);
+        oNor = vec4(nor, specularF);
       }
     }
     `,
@@ -101,6 +103,7 @@ export const SHADERS = {
       ["uMaterial.isComplex", "1i"],
       ["uMaterial.colorTex", "1i"],
       ["uMaterial.normalTex", "1i"],
+      ["uMaterial.specularTex", "1i"],
       ["uMaterial.shininess", "1f"],
       ["uMaterial.metadata", "1i"],
     ],

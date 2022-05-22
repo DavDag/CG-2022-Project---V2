@@ -1,9 +1,10 @@
 import { Texture, Vec3 } from "webgl-basic-lib";
-import { SingleColorTexture, TemporaryColorTexture, TemporaryNormalTexture } from "../rendering/textures.js";
+import { SingleColorTexture, TemporaryColorTexture, TemporaryNormalTexture, TemporarySpecularTexture } from "../rendering/textures.js";
 
 const MATERIAL_BASE_PATH = (name) => `assets/materials/${name}/${name}`;
 const MATERIAL_COLOR_TEX = (basePath) => `${basePath}_COLOR.jpg`;
 const MATERIAL_NORMAL_TEX = (basePath) => `${basePath}_NORM.jpg`;
+const MATERIAL_SPECULAR_TEX = (basePath) => `${basePath}_ROUGH.jpg`;
 
 const DEF_CONFIGS = (gl) => ({
   target: gl.TEXTURE_2D,
@@ -30,6 +31,10 @@ const DEF_PROPS = {
   shininess: 2.0,
   isLit: true,
 };
+const DEF_LOW_SHININESS_PROPS = {
+  shininess: 1.0,
+  isLit: true,
+};
 const DEF_HIGH_SHININESS_PROPS = {
   shininess: 32.0,
   isLit: true,
@@ -48,6 +53,7 @@ export class MaterialData {
   isComplex = null;
   colorTex = null;
   normalTex = null;
+  specularTex = null;
 
   shininess = null;
   isLit = null;
@@ -69,12 +75,13 @@ export class MaterialData {
     return data;
   }
 
-  static Complex(colorTex, normalTex, props) {
+  static Complex(colorTex, normalTex, specularTex, props) {
     const data = new MaterialData();
     data.isComplex = true;
     data.color = null;
     data.colorTex = colorTex;
     data.normalTex = normalTex;
+    data.specularTex = specularTex;
     data.shininess = props.shininess;
     data.isLit = props.isLit;
     return data;
@@ -92,6 +99,9 @@ export class MaterialData {
       
       this.normalTex.bind(1);
       prog["uMaterial.normalTex"].update(1);
+      
+      this.specularTex.bind(2);
+      prog["uMaterial.specularTex"].update(2);
     }
     else {
       prog["uMaterial.isComplex"].update(0);
@@ -128,8 +138,8 @@ export class MaterialsManager {
 
   constructor(gl) {
     this.#ctx = gl;
-    // this.#materials.debug = MaterialData.Complex(TemporaryColorTexture(gl), TemporaryNormalTexture(gl), DEF_PROPS);
-    this.#materials.debug = MaterialData.Simple(new Vec3(1, 1, 1), DEF_PROPS);
+    // this.#materials.debug = MaterialData.Complex(TemporaryColorTexture(gl), TemporaryNormalTexture(gl), TemporarySpecularTexture(gl), DEF_PROPS);
+    // this.#materials.debug = MaterialData.Simple(new Vec3(1, 1, 1), DEF_PROPS);
 
     {
       // Buildings
@@ -171,7 +181,8 @@ export class MaterialsManager {
       
       // Terrain
       this.#loadMaterialAsColor("terrainTerrain", DEF_PROPS, [0.5, 0.5, 0.5]);
-      this.#loadMaterialAsColor("terrainGrass", DEF_HIGH_SHININESS_PROPS, [0.270, 0.580, 0.262]);
+      // this.#loadMaterial("terrainTerrain", DEF_HIGH_SHININESS_PROPS, "Asphalt_002", DEF_TILEABLE_CONFIGS(gl));
+      this.#loadMaterialAsColor("terrainGrass", DEF_PROPS, [0.270, 0.580, 0.262]);
       this.#loadMaterialAsColor("terrainAsphalt", DEF_PROPS, [0.25, 0.25, 0.25]);
     }
 
@@ -197,7 +208,8 @@ export class MaterialsManager {
     this.#materials[alias] = MaterialData.Complex(
       TemporaryColorTexture(gl),
       TemporaryNormalTexture(gl),
-      props.shininess,
+      TemporarySpecularTexture(gl),
+      props,
     );
 
     Texture
@@ -209,5 +221,10 @@ export class MaterialsManager {
       .FromUrl(gl, MATERIAL_NORMAL_TEX(path), configs)
       .catch((err) => console.error("Unable to load material: ", name, err))
       .then((tex) => this.#materials[alias].normalTex = tex);
+
+    Texture
+      .FromUrl(gl, MATERIAL_SPECULAR_TEX(path), configs)
+      .catch((err) => console.error("Unable to load material: ", name, err))
+      .then((tex) => this.#materials[alias].specularTex = tex);
   }
 }

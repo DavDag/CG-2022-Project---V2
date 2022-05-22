@@ -243,7 +243,7 @@ export class App {
     this.#lightMng.addDL(true, new DLight(
       new Vec3(1, -1, 1).normalize(),
       new Vec3(1, 1, 1),
-      {amb: 0.5, dif: 1.0, spe: 0.2}
+      {amb: 0.5, dif: 1.0, spe: 1.0}
     ));
 
     this.#lightMng.addDL(false, new DLight(
