@@ -70,14 +70,15 @@ export class UIManager {
 
       partResults: document.getElementById("partResults"),
       aaSampleMethod: document.getElementById("aaSampleMethod"),
+      dirLightDepthTex: document.getElementById("dirLightDepthTex"),
+      ssaoResults: document.getElementById("ssaoResults"),
+      bloomResults: document.getElementById("bloomResults"),
 
       dirLights: document.getElementById("dirLights"),
       pointLights: document.getElementById("pointLights"),
       spotLights: document.getElementById("spotLights"),
       showLightsPos: document.getElementById("showLightsPos"),
-      dirLightDepthTex: document.getElementById("dirLightDepthTex"),
       isDay: document.getElementById("isDay"),
-      ssaoResults: document.getElementById("ssaoResults"),
 
       cameraName: document.getElementById("cameraName"),
       forceFollow: document.getElementById("forceFollow"),
@@ -144,6 +145,7 @@ export class UIManager {
       // this.#docRef.aaSampleMethod.innerHTML = CUSTOM((renderer.aaSamples == 0) ? "None" : "Native x" + renderer.aaSamples);
       this.#docRef.ssaoResults.innerHTML = (renderer.showOccResults) ? ON : OFF;
       this.#docRef.dirLightDepthTex.innerHTML = (renderer.showDirLightDepthTex) ? ON : OFF;
+      this.#docRef.bloomResults.innerHTML = (renderer.showBloomResults) ? ON : OFF;
       this.#docRef.tonemappingGamma.innerHTML = CUSTOM(lightMng.gamma);
       this.#docRef.tonemappingGammaSlider.value = lightMng.gamma;
       this.#docRef.tonemappingExposure.innerHTML = CUSTOM(lightMng.exposure);

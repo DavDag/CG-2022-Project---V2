@@ -31,11 +31,15 @@ export class Renderer {
   #spotShadowsColTex = null;
   #spotShadowsDepthTex = null;
 
+  #bloomFB = null;
+  #bloomColTex = null;
+
   aaSamples = 0;
   aaMaxSamples = 0;
   showPartialResults = false;
   showOccResults = false;
   showDirLightDepthTex = false;
+  showBloomResults = false;
 
   #quad = null;
 
@@ -44,8 +48,9 @@ export class Renderer {
     debugview: null,
     debugdraw: null,
     ssao: null,
-    ssaoblur: null,
+    blur: null,
     shadowmap: null,
+    bloom: null,
     deferred: null,
     textured: null,
   };
@@ -56,8 +61,9 @@ export class Renderer {
     this.#programs.debugview = CreateProgramFromData(gl, SHADERS.DEBUG_VIEW);
     this.#programs.debugdraw = CreateProgramFromData(gl, SHADERS.DEBUG_DRAW);
     this.#programs.ssao = CreateProgramFromData(gl, SHADERS.SSAO);
-    this.#programs.ssaoblur = CreateProgramFromData(gl, SHADERS.SSAO_BLUR);
+    this.#programs.blur = CreateProgramFromData(gl, SHADERS.BLUR);
     this.#programs.shadowmap = CreateProgramFromData(gl, SHADERS.SHADOW_MAP_DL);
+    this.#programs.bloom = CreateProgramFromData(gl, SHADERS.BLOOM);
     this.#programs.deferred = CreateProgramFromData(gl, SHADERS.DEFERRED);
     this.#programs.textured = CreateProgramFromData(gl, SHADERS.TEXTURED);
 
@@ -81,6 +87,9 @@ export class Renderer {
     this.#spotShadowsFB = gl.createFramebuffer();
     this.#spotShadowsColTex = gl.createTexture();
     this.#spotShadowsDepthTex = gl.createTexture();
+
+    this.#bloomFB = gl.createFramebuffer();
+    this.#bloomColTex = gl.createTexture();
 
     this.#quad = Quad.asAdvancedShape().createBuffers(gl);
     
@@ -163,6 +172,13 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.bindTexture(gl.TEXTURE_2D, this.#bloomColTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, size.w, size.h, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     
     gl.bindTexture(gl.TEXTURE_2D, null);
 
@@ -202,6 +218,9 @@ export class Renderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.#spotShadowsFB);
     gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.#spotShadowsColTex, 0, 0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, this.#spotShadowsDepthTex, 0);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.#bloomFB);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.#bloomColTex, 0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
@@ -559,7 +578,7 @@ export class Renderer {
 
     // Blur (on SSAO)
     {
-      const prog = this.#programs.ssaoblur;
+      const prog = this.#programs.blur;
       prog.use();
 
       prog.uMatrix.update(quadMatRev.values);
@@ -588,6 +607,54 @@ export class Renderer {
       // Debug show occ results
       if (this.showOccResults) {
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#ssaoBlurFB);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+        
+        gl.viewport(0, 0, w, h);
+  
+        gl.drawBuffers([
+          gl.BACK,
+        ]);
+  
+        gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.LINEAR);
+  
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+  
+        return;
+      }
+    }
+
+    // Bloom
+    {
+      const prog = this.#programs.bloom;
+      prog.use();
+
+      prog.uMatrix.update(quadMatRev.values);
+      prog.uTexture.update(0);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#bloomFB);
+      gl.viewport(0, 0, w, h);
+
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      gl.drawBuffers([
+        gl.COLOR_ATTACHMENT0,
+      ]);
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.#offscreenColTex);
+
+      this.#drawQuad(prog);
+
+      prog.unbind();
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+
+      // Debug show bloom results
+      if (this.showBloomResults) {
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.#bloomFB);
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
         
         gl.viewport(0, 0, w, h);

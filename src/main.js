@@ -198,6 +198,10 @@ export class App {
         this.#lightMng.isDay = !this.#lightMng.isDay;
         break;
       }
+      case "b": {
+        this.#renderer.showBloomResults = !this.#renderer.showBloomResults;
+        break;
+      }
       case "o": {
         this.#renderer.showOccResults = !this.#renderer.showOccResults;
         break;

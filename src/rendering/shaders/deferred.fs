@@ -283,9 +283,9 @@ void main() {
 
   // Load material
   Material material;
-  material.shininess = texCol.a;
+  material.shininess = texPos.a;
   material.specular = texNor.a;
-  material.isLit = (int(texPos.a) & IS_LIT_FLAG) == IS_LIT_FLAG;
+  material.isLit = (int(texCol.a) & IS_LIT_FLAG) == IS_LIT_FLAG;
 
   // Store result
   vec3 result = vec3(0);

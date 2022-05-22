@@ -188,7 +188,7 @@ export class MaterialsManager {
 
     {
       // this.#loadMaterialAsColor("window", DEF_PROPS, [0.9372549, 0.9372549, 0.9372549]);
-      // this.#loadMaterialAsColor("window" + NIGHT_TAG, DEF_GLOWING_PROPS, [2, 2, 2]);
+      this.#loadMaterialAsColor("buildingWindow" + NIGHT_TAG, DEF_GLOWING_PROPS, [2, 2, 2]);
     }
   }
 

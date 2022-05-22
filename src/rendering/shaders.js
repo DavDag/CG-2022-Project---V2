@@ -75,15 +75,15 @@ export const SHADERS = {
 
     void main() {
       if (uMaterial.isComplex == 0) {
-        oCol = vec4(uMaterial.color, uMaterial.shininess);
-        oPos = vec4(fPos, float(uMaterial.metadata));
+        oCol = vec4(uMaterial.color, float(uMaterial.metadata));
+        oPos = vec4(fPos, uMaterial.shininess);
         oNor = vec4(normalize(fNor), 0.0);
       } else {
         vec3 col = texture(uMaterial.colorTex, fTex).rgb;
         vec3 nor = normalize(texture(uMaterial.normalTex, fTex).xyz * 2.0 - 1.0);
         float specularF = texture(uMaterial.specularTex, fTex).r;
-        oCol = vec4(col, uMaterial.shininess);
-        oPos = vec4(fPos, float(uMaterial.metadata));
+        oCol = vec4(col, float(uMaterial.metadata));
+        oPos = vec4(fPos, uMaterial.shininess);
         oNor = vec4(nor, specularF);
       }
     }
@@ -307,7 +307,44 @@ export const SHADERS = {
     ],
   }),
 
-  SSAO_BLUR: (gl) => ({
+  BLOOM: (gl) => ({
+    vertex_shader_src: `#version 300 es
+    layout (location = 0) in vec3 vPos;
+    layout (location = 1) in vec2 vTex;
+    uniform mat4 uMatrix;
+    out vec2 fTex;
+    void main() {
+      fTex = vTex;
+      gl_Position = uMatrix * vec4(vPos, 1.0);
+    }
+    `,
+
+    fragment_shader_src: `#version 300 es
+    #define IS_LIT_FLAG (1 << 0)
+    precision highp float;
+    uniform sampler2D uTexture;
+    in vec2 fTex;
+    out vec4 oCol;
+    void main() {
+      vec4 texCol = textureLod(uTexture, fTex, 0.0);
+      int metadata = int(texCol.a);
+      bool isLit = (metadata & IS_LIT_FLAG) == IS_LIT_FLAG;
+      oCol = vec4(((!isLit) ? texCol.rgb : vec3(0)), 1.0);
+    }
+    `,
+
+    attributes: [
+      ["vPos", 3, gl.FLOAT, 32,  0],
+      ["vTex", 2, gl.FLOAT, 32, 12],
+    ],
+
+    uniforms: [
+      ["uMatrix", "Matrix4fv"],
+      ["uTexture", "1i"],
+    ],
+  }),
+
+  BLUR: (gl) => ({
     vertex_shader_src: `#version 300 es
     layout (location = 0) in vec3 vPos;
     layout (location = 1) in vec2 vTex;
