@@ -72,7 +72,7 @@ function CreateTile(objects, terrain) {
   const arr3 = [[6, 6, 289, 0], [6, 3, 13, 1], [19, 10, 236, 0], [-17, -17, 149, 0], [ -6, -14, 146, 0], [-16, -15, 322, 1]];
   arr3.forEach((data) => objects.push(new Rock(data[3], new Vec3(data[0], 0, data[1]), data[2])));
 
-  objects.push(new PicNic(0, new Vec3(10, 0, 10), 127));
+  objects.push(new PicNic(0, new Vec3(15, 0, 13), 127));
   objects.push(new PicNic(1, new Vec3(10, 0, 15), 200));
   
   for (let x = 1; x < 20; ++x)

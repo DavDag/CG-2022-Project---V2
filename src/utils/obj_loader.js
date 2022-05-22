@@ -100,7 +100,7 @@ export class OBJGraph {
         // "New" geometry
         case "g":
         case "o": {
-          const name = keys[1];
+          const section = keys[1];
           if (current) {
             current.vBuffer.length = vertexes.length - current.vBuffer.index;
             current.lBuffer.length = lines.length - current.lBuffer.index;
@@ -108,13 +108,16 @@ export class OBJGraph {
           if (current?.sections.at(-1)) {
             current.sections.at(-1).length = (vertexes.length - current.sections.at(-1).index);
           }
-          meshes[name] = new OBJMesh(
+          if (meshes[section]) {
+            console.warn("Overriding mesh for object:", name, " section:", section);
+          }
+          meshes[section] = new OBJMesh(
             rawVertBuff,
             vertexes.length,
             rawLinesBuff,
             lines.length,
           );
-          current = meshes[name];
+          current = meshes[section];
           break;
         }
   
