@@ -74,6 +74,9 @@ uniform DLight uDirectionalLight;
 uniform PLight uPointLights[NUM_PL];
 uniform SLight uSpotLights[NUM_SL];
 
+uniform float uGamma;
+uniform float uExposure;
+
 vec3 CalcDirLight(DLight light, vec3 viewDir, vec3 normal, vec3 color, float occlusion, float invShadowF, Material material) {
   // Direction
   vec3 lightDir = normalize(-light.dir);
@@ -289,6 +292,9 @@ void main() {
 
   // Do lightning calculation ONLY if material is lit
   if (material.isLit) {
+    // View direction
+    vec3 viewDir = normalize(uViewPos - fPos);
+
     ////////////////////////////////////
     // Shadows: Dir Light
     ////////////////////////////////////
@@ -296,20 +302,6 @@ void main() {
     if (uUseDirLightForShadow == 1) {
       dirShadow = CalcDirShadow(fPos, fNor, 0.0000);
     }
-
-    ////////////////////////////////////
-    // Shadows: Spot Light
-    ////////////////////////////////////
-    float spotShadow = 0.0;
-    for (int i = 0; i < uUseSpotLightForShadow; ++i) {
-      spotShadow += CalcSpotShadow(i, fPos, fNor, 0.000);
-    }
-    
-    // Calculate shadow factor
-    float invShadowF = 1.0 - min(dirShadow + spotShadow, 1.0);
-
-    // View direction
-    vec3 viewDir = normalize(uViewPos - fPos);
 
     ////////////////////////////////////
     // Directional Light
@@ -320,20 +312,33 @@ void main() {
       ////////////////////////////////////
       // Point Light
       ////////////////////////////////////
-      result += CalcPointLight(uPointLights[p], viewDir, fPos, fNor, fCol, fOcc, invShadowF, material);
+      result += CalcPointLight(uPointLights[p], viewDir, fPos, fNor, fCol, fOcc, 1.0, material);
     }
 
     for (int s = 0; s < NUM_SL; ++s) {
       ////////////////////////////////////
+      // Shadows: Spot Light
+      ////////////////////////////////////
+      float spotShadow = CalcSpotShadow(s, fPos, fNor, 0.000);
+
+      ////////////////////////////////////
       // Spot Light
       ////////////////////////////////////
-      // float shadowF = CalcSpotShadow(s, fPos, fNor, 0.000);
-      // result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, 1.0 - shadowF, material);
-      result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, invShadowF, material);
+      result += CalcSpotLight(uSpotLights[s], viewDir, fPos, fNor, fCol, fOcc, 1.0 - spotShadow, material);
     }
   }
   else {
     result = fCol;
+  }
+
+  ////////////////////////////////////
+  // Tone Mapping
+  ////////////////////////////////////
+  {
+    vec3 mapped = vec3(1.0) - exp(-result * uExposure);
+    mapped = pow(mapped, vec3(1.0 / uGamma));
+
+    result = mapped;
   }
 
   oColor = vec4(result, 1.0);

@@ -469,7 +469,7 @@ export class Renderer {
             if (i < 2) {
               spotLightMat.push(
                 Mat4.Identity()
-                .apply(Mat4.Perspective(toRad(50), 1.0, 0.1, 10.0))
+                .apply(Mat4.Perspective(toRad(150), 1.0, 0.1, 10.0))
                 .apply(Mat4.LookAt(lightPos, lightPos.clone().add(lightDir), new Vec3(0, 1, 0)))
               );
             } else {
@@ -631,6 +631,9 @@ export class Renderer {
         spotLightMat.forEach((mat, ind) => {
           prog["uSpotLightMat[" + ind + "]"].update(mat.values);
         });
+
+        prog.uGamma.update(2.2);
+        prog.uExposure.update(light_mng.isDay ? 0.1 : 1.0);
       }
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);

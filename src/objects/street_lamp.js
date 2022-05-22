@@ -23,7 +23,7 @@ export class StreetLamp {
   get matrix() { return this.#cachedMat; }
   get lightDir() { return new Vec3(0, -1, 0); }
   get lightPos() { return this.#cachedLightPos; }
-  get lightCol() { return new Vec3(1, 1, 1); }
+  get lightCol() { return new Vec3(5, 5, 5); }
 
   constructor(pos, rot) {
     this.#pos = pos;
