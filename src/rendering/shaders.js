@@ -1,6 +1,7 @@
 import { Program, Shader } from "webgl-basic-lib";
 
 import DeferredFS from '!raw-loader!./shaders/deferred.fs';
+import SSAOFS from '!raw-loader!./shaders/ssao.fs';
 
 export function CreateProgramFromData(gl, dataGen) {
   const data = dataGen(gl);
@@ -29,7 +30,8 @@ export const SHADERS = {
     layout (location = 2) in vec3 vNor;
 
     uniform mat4 uModel;
-    uniform mat4 uViewProj;
+    uniform mat4 uView;
+    uniform mat4 uProj;
 
     out vec3 fPos;
     out vec2 fTex;
@@ -37,10 +39,14 @@ export const SHADERS = {
 
     void main() {
       vec4 worldPos = uModel * vec4(vPos, 1.0);
+      // World Space
       fPos = worldPos.xyz;
-      fTex = vTex;
       fNor = transpose(inverse(mat3(uModel))) * vNor;
-      gl_Position = uViewProj * worldPos;
+      // // View Space
+      // fPos = (uView * worldPos).xyz;
+      // fNor = mat3(uView * mat4(transpose(inverse(mat3(uModel))))) * vNor;
+      fTex = vTex;
+      gl_Position = uProj * uView * worldPos;
     }
     `,
 
@@ -66,7 +72,7 @@ export const SHADERS = {
       vec3 col = texture(uTexture, fTex).rgb;
       oCol = vec4(col, uMaterial.shininess);
       oPos = vec4(fPos, 1.0);
-      oNor = vec4(normalize(fNor), 1.0);
+      oNor = vec4(normalize(fNor), 0.0);
     }
     `,
 
@@ -78,7 +84,8 @@ export const SHADERS = {
 
     uniforms: [
       ["uModel", "Matrix4fv"],
-      ["uViewProj", "Matrix4fv"],
+      ["uView", "Matrix4fv"],
+      ["uProj", "Matrix4fv"],
       ["uTexture", "1i"],
       ["uMaterial.shininess", "1f"],
     ],
@@ -260,60 +267,7 @@ export const SHADERS = {
     }
     `,
 
-    fragment_shader_src: `#version 300 es
-    precision highp float;
-
-    uniform sampler2D uPosTex;
-    uniform sampler2D uNorTex;
-    uniform sampler2D uDepthTex;
-    uniform sampler2D uNoiseTex;
-
-    uniform mat4 uViewProj;
-    uniform vec3 uSamples[${SSAO_SAMPLE_COUNT}];
-
-    const vec2 noiseScale = vec2(800.0 / 4.0, 600.0 / 4.0);
-
-    in vec2 fTex;
-
-    out float oColor;
-
-    void main() {
-      vec4 texPos = texture(uPosTex, fTex);
-      vec4 texNor = texture(uNorTex, fTex);
-      vec4 texNoise = texture(uNoiseTex, fTex * noiseScale);
-
-      vec3 fPos = texPos.xyz;
-      vec3 fNor = texNor.xyz;
-      vec3 fRndVec = texNoise.xyz;
-
-      vec3 tangent = normalize(fRndVec - fNor * dot(fRndVec, fNor));
-      vec3 bitangent = cross(fNor, tangent);
-      mat3 TBN = mat3(tangent, bitangent, fNor);
-      
-      float radius = 0.5;
-      float bias = 0.025;
-
-      float occlusion = 0.0;
-
-      for (int s = 0; s < ${SSAO_SAMPLE_COUNT}; ++s) {
-        vec3 samplingPos = TBN * uSamples[s];
-        samplingPos = fPos + samplingPos * radius;
-
-        vec4 offset = vec4(samplingPos, 1.0);
-        offset = uViewProj * offset;
-        offset.xyz /= offset.w;
-        offset.xyz = offset.xyz * 0.5 + 0.5;
-
-        float depth = texture(uPosTex, offset.xy).z;
-        float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fPos.z - depth));
-        occlusion += ((depth >= samplingPos.z + bias) ? 1.0 : 0.0) * rangeCheck;
-      }
-
-      occlusion = 1.0 - occlusion / float(${SSAO_SAMPLE_COUNT});
-
-      oColor = occlusion;
-    }
-    `,
+    fragment_shader_src: SSAOFS,
 
     attributes: [
       ["vPos", 3, gl.FLOAT, 32,  0],
@@ -322,7 +276,8 @@ export const SHADERS = {
 
     uniforms: [
       ["uMatrix", "Matrix4fv"],
-      ["uViewProj", "Matrix4fv"],
+      ["uViewMat", "Matrix4fv"],
+      ["uProjMat", "Matrix4fv"],
       ["uPosTex", "1i"],
       ["uNorTex", "1i"],
       ["uDepthTex", "1i"],

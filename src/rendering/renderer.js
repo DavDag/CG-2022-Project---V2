@@ -214,14 +214,14 @@ export class Renderer {
 
     const gl = this.#ctx;
     const prog = this.#programs.default;
-    const viewProjMat = camera.viewproj;
     const tmpStack = new MatrixStack();
 
     tmpStack.push(mat);
 
     prog.use();
     prog.uTexture.update(0);
-    prog.uViewProj.update(viewProjMat.values);
+    prog.uView.update(camera.view.values);
+    prog.uProj.update(camera.proj.values);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, obj.rawVertBuff);
     prog.enableAttributes();
@@ -517,7 +517,8 @@ export class Renderer {
       for (let k = 0; k < kernels.length; ++k) {
         prog["uSamples[" + k + "]"].update(kernels[k].values);
       }
-      prog.uViewProj.update(camera.viewproj.values);
+      prog.uViewMat.update(camera.view.values);
+      prog.uProjMat.update(camera.proj.values);
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.#ssaoFB);
       gl.viewport(0, 0, w, h);
