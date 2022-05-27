@@ -110,10 +110,10 @@ export class UIManager {
   ) {
     const gl = this.#ctx;
 
-    // General
+    // // General
     this.#docRef.fpsCounter.innerHTML = Math.abs(FPS).toFixed(1);
     
-    // Player
+    // // Player
     const controller = player.controller;
     this.#docRef.accMeter.innerHTML = Math.abs(controller.acceleration * controller.frontFactor).toFixed(1);
     this.#docRef.speedMeter.innerHTML = Math.abs(controller.speed).toFixed(1);
@@ -155,7 +155,7 @@ export class UIManager {
     }
   }
 
-  #frames1 = 0;
+  #lastUpdateRequested = 0;
   updateRequested(
     app,
     player,
@@ -163,14 +163,13 @@ export class UIManager {
     cameraMng,
     renderer,
   ) {
-    this.#frames1++;
-    if (this.#frames1 == 10) {
-      this.#frames1 = 0;
+    const now = performance.now();
+    if (now - this.#lastUpdateRequested > 500) {
+      this.#lastUpdateRequested = now;
       this.#update(true, app, player, lightMng, cameraMng, renderer);
     }
   }
 
-  #frames2 = 0;
   updateRealTime(
     app,
     player,
@@ -178,10 +177,10 @@ export class UIManager {
     cameraMng,
     renderer,
   ) {
-    this.#frames2++;
-    if (this.#frames2 == 10) {
-      this.#frames2 = 0;
-      this.#update(false, app, player, lightMng, cameraMng, renderer);
+    const now = performance.now();
+    if (now - this.#lastUpdateRequested > 500) {
+      this.#lastUpdateRequested = now;
+      this.#update(true, app, player, lightMng, cameraMng, renderer);
     }
   }
 }
