@@ -1,8 +1,8 @@
 #version 300 es
 
-#define NUM_PL 4
-#define NUM_SL 32
-#define NUM_SHADOW_CASTER 32
+#define NUM_PL 2
+#define NUM_SL 24
+#define NUM_SHADOW_CASTER 24
 
 #define IS_LIT_FLAG (1 << 0)
 

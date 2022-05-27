@@ -15,12 +15,12 @@ export function CreateProgramFromData(gl, dataGen) {
   return program;
 }
 
-export const SSAO_SAMPLE_COUNT = 128;
-export const NUM_SHADOW_CASTER = 32;
-export const NUM_PL = 4;
-export const NUM_SL = 32;
-export const HIGH_SHADOW_SIZE = 8192;
-export const SMALL_SHADOW_SIZE = 1024;
+export const SSAO_SAMPLE_COUNT = 32;
+export const NUM_SHADOW_CASTER = 24;
+export const NUM_PL = 2;
+export const NUM_SL = 24;
+export const HIGH_SHADOW_SIZE = 4096;
+export const SMALL_SHADOW_SIZE = 512;
 
 export const SHADERS = {
 

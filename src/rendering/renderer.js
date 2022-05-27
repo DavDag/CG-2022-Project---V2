@@ -45,7 +45,7 @@ export class Renderer {
   showDirLightDepthTex = false;
   showBloomResults = false;
 
-  showRain = false;
+  showRain = true;
 
   #quad = null;
 

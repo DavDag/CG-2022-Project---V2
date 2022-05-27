@@ -93,7 +93,7 @@ export class LightManager {
   pointLightsOff = false;
   spotLightsOff = false;
 
-  #isDay = true;
+  #isDay = false;
   get isDay() { return this.#isDay; }
   set isDay(value) { this.#isDay = value; this.#exposure = (this.isDay) ? 0.2 : 1.0; }
 
@@ -108,7 +108,7 @@ export class LightManager {
   #gamma = 1.0;
   get gamma() { return this.#gamma; }
   set gamma(value) { this.#gamma = value; }
-  #exposure = 0.2;
+  #exposure = 1.0;
   get exposure() { return this.#exposure; }
   set exposure(value) { this.#exposure = value; }
 

@@ -1,7 +1,7 @@
 #version 300 es
 precision highp float;
 
-#define SSAO_SAMPLE_COUNT 128
+#define SSAO_SAMPLE_COUNT 32
 #define RADIUS 0.5
 #define BIAS 0.0625
 
@@ -14,13 +14,13 @@ uniform mat4 uViewMat;
 uniform mat4 uProjMat;
 uniform vec3 uSamples[SSAO_SAMPLE_COUNT];
 
-const vec2 noiseScale = vec2(800.0 / 4.0, 600.0 / 4.0);
-
 in vec2 fTex;
 
 out float oColor;
 
 void main() {
+  vec2 noiseScale = vec2(textureSize(uPosTex, 0).xy) / 4.0;
+  
   // Sample from buffers using direct access (no mipmap needed)
   vec4 texPos = textureLod(uPosTex, fTex, 0.0);
   vec4 texNor = textureLod(uNorTex, fTex, 0.0);
