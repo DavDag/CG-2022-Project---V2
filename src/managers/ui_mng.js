@@ -165,6 +165,7 @@ export class UIManager {
     this.#update(true, app, player, lightMng, cameraMng, renderer);
   }
 
+  #frames = 0;
   updateRealTime(
     app,
     player,
@@ -172,6 +173,10 @@ export class UIManager {
     cameraMng,
     renderer,
   ) {
-    this.#update(false, app, player, lightMng, cameraMng, renderer);
+    this.#frames++;
+    if (this.#frames == 10) {
+      this.#frames = 0;
+      this.#update(false, app, player, lightMng, cameraMng, renderer);
+    }
   }
 }
