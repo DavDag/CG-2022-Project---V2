@@ -115,7 +115,7 @@ export class UIManager {
     
     // Player
     const controller = player.controller;
-    this.#docRef.accMeter.innerHTML = Math.abs(controller.acceleration).toFixed(1);
+    this.#docRef.accMeter.innerHTML = Math.abs(controller.acceleration * controller.frontFactor).toFixed(1);
     this.#docRef.speedMeter.innerHTML = Math.abs(controller.speed).toFixed(1);
 
     if (forceAll) {
