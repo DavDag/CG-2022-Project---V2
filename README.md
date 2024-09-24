@@ -1,6 +1,11 @@
 # CG-2022-Project---V2
 [![Vercel](https://therealsujitk-vercel-badge.vercel.app/?app=cg-2022-project-v2)](https://cg-2022-project-v2.vercel.app/)
 
+Project made during university year to apply some CG concepts.<br>
+Entirely made using WebGL an no other libraries.<br>
+
+Of course, for the mathematical dependency, I've used another [project of mine](https://github.com/DavDag/WebGL-basic-lib).<br>
+
 ## Demo
 
 https://github.com/user-attachments/assets/b21b419b-918c-44fb-b50e-cdff31c845dc
